@@ -1,0 +1,119 @@
+
+Here’s the fully detailed prompt for your Monisha Inventory Management System project:
+
+Project Name: Monisha Internal Inventory Management System
+Purpose:
+Develop a comprehensive ReactJS-based web application using Vite, tailored for Monisha employees to efficiently manage the manufacturing, inventory, and distribution of uniforms to primary and secondary schools. The application will streamline operations, provide in-depth data visualization, and offer role-based access for employees.
+
+Key Features:
+1. Authentication & Role Management
+Static login/logout for now, with integration for database later.
+Role-based access:
+Admin: Full access, including user management and reports.
+Manager: Inventory, school, and transaction oversight.
+Employee: Restricted to adding/editing uniforms, batches, and transactions.
+
+
+2. Dashboard
+Overview Metrics:
+Total transactions, total revenue, inventory stock status, and batch tracking.
+Graphical Reports:
+Sales trends, stock levels, and batch distribution.
+Quick Actions:
+Links to key sections like Add Uniform, Add School, and View Transactions.
+
+
+3. Uniform Inventory Management
+Categorization:
+Uniforms are classified by Type (e.g., Blazer, Shirt), Category (e.g., Universal, Sportswear, Formal), and Variants.
+Variants:
+Each uniform type includes multiple variants based on size, color, material, and other attributes.
+Stock Tracking:
+Track stock for each variant, with low-stock alerts.
+Advanced Filtering:
+Search by type, category, or variant properties.
+
+
+4. Uniform Material Management
+Predefined Materials:
+Employees can select from a predefined library of common materials.
+Custom Materials:
+Employees can add custom materials when necessary, with details such as name, type, durability, and cost.
+Material Integration:
+Materials are linked to uniform variants for better tracking.
+
+
+5. School Management
+Add, view, edit, and delete schools with fields such as:
+School Name, Address, Contact Person, Phone Number, Email, and Order History.
+View transaction history and invoices for each school.
+
+
+6. Batch Management
+Batch Details:
+Record production batches with Batch ID, Production Date, Quantity, Supplier, and Production Cost.
+Status Tracking:
+Batches are categorized as "In Production," "In Stock," or "Distributed."
+Batch Allocation:
+Assign specific batches to schools or inventory.
+
+
+7. Transactions Management
+Order Recording:
+Record new transactions with fields for School Name, Uniforms, Quantity, Price, and Payment Status.
+History and Filters:
+View and filter transactions by date, school, or employee.
+Report Export:
+Generate transaction reports as PDF or Excel for accounting purposes.
+
+
+8. Reporting & Analytics
+Generate detailed reports, including:
+Sales by time period.
+Inventory stock levels and usage trends.
+Batch utilization and production efficiency.
+Reports are downloadable as PDF or Excel.
+
+
+9. Notifications & Alerts
+Alerts for low stock levels.
+Notifications for upcoming restocks or expiring batches.
+Daily summary emails (later integrated with database).
+
+
+10. Settings & Configurations
+Configure company details (e.g., name, address, and logo).
+Set default tax rates and currencies.
+Customize categories for uniforms and materials.
+
+
+Design & UI/UX Requirements:
+Modern & Professional: Sleek design with smooth user interactions.
+Responsive Design: Fully optimized for both mobile and desktop.
+
+CSS Frameworks:
+Tailwind CSS for primary styling.
+Ant Design or Material-UI for complex components (e.g., tables, modals).
+
+Navigation:
+Sidebar navigation for key sections (e.g., Dashboard, Inventory, Schools).
+Top navigation bar for user profile, notifications, and settings.
+
+
+Technical Specifications:
+Frontend: ReactJS (Vite).
+Styling: Tailwind CSS, Ant Design, or Material-UI.
+State Management: Redux or Context API for dynamic data handling.
+Routing: React Router for navigation.
+Mock Data: Use JSON files for now, with plans to integrate a database later.
+
+
+Entity Relationships:
+Uniforms:
+Linked to variants and materials.
+Materials:
+Associated with uniform variants for tracking usage.
+Schools:
+Related to transactions and orders.
+Batches:
+Allocated to specific uniforms and schools.

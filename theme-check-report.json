@@ -1,0 +1,1861 @@
+{
+  "timestamp": "2025-10-13T18:17:25.838Z",
+  "summary": {
+    "totalFiles": 34,
+    "totalMatches": 190,
+    "hexColors": 141,
+    "rgbColors": 33,
+    "hslColors": 0,
+    "inlineStyles": 16
+  },
+  "files": [
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/AddableSelect.jsx",
+      "matchCount": 2,
+      "matches": [
+        {
+          "line": 31,
+          "type": "hex",
+          "match": "#1F2129",
+          "context": "className=\"block w-full h-12 px-4 rounded-lg bg-[#1F2129] text-white border border-transparent focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200 appearance-none pr-10\""
+        },
+        {
+          "line": 61,
+          "type": "hex",
+          "match": "#1F2129",
+          "context": "className=\"block w-full h-12 px-4 rounded-lg bg-[#1F2129] text-white border border-transparent focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/charts/InteractiveChart.jsx",
+      "matchCount": 6,
+      "matches": [
+        {
+          "line": 135,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 140,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 152,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<p key={index} className=\"text-sm\" style={{ color: entry.color }}>"
+        },
+        {
+          "line": 167,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "<Brush dataKey=\"name\" height={30} stroke=\"#8884d8\" />"
+        },
+        {
+          "line": 194,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "fill=\"#8884d8\""
+        },
+        {
+          "line": 212,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "style={{ borderLeft: `4px solid ${metric.color}` }}"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/charts/InventoryTrends.jsx",
+      "matchCount": 6,
+      "matches": [
+        {
+          "line": 13,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<p key={index} className=\"text-sm\" style={{ color: entry.color }}>"
+        },
+        {
+          "line": 52,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 57,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 65,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "stroke=\"#4F46E5\""
+        },
+        {
+          "line": 73,
+          "type": "hex",
+          "match": "#10B981",
+          "context": "stroke=\"#10B981\""
+        },
+        {
+          "line": 81,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "stroke=\"#F59E0B\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/charts/ProductDistribution.jsx",
+      "matchCount": 7,
+      "matches": [
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];"
+        },
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#10B981",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];"
+        },
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];"
+        },
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#EC4899",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];"
+        },
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#8B5CF6",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];"
+        },
+        {
+          "line": 68,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "fill=\"#8884d8\""
+        },
+        {
+          "line": 87,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "style={{ backgroundColor: COLORS[index % COLORS.length] }}"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/charts/RevenueChart.jsx",
+      "matchCount": 5,
+      "matches": [
+        {
+          "line": 55,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<stop offset=\"5%\" stopColor=\"#4F46E5\" stopOpacity={0.1}/>"
+        },
+        {
+          "line": 56,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<stop offset=\"95%\" stopColor=\"#4F46E5\" stopOpacity={0}/>"
+        },
+        {
+          "line": 64,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 69,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 81,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "stroke=\"#4F46E5\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/charts/SchoolPerformance.jsx",
+      "matchCount": 5,
+      "matches": [
+        {
+          "line": 43,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 53,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 62,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 67,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<Bar yAxisId=\"left\" dataKey=\"revenue\" fill=\"#4F46E5\" name=\"Revenue\" radius={[4, 4, 0, 0]} />"
+        },
+        {
+          "line": 68,
+          "type": "hex",
+          "match": "#10B981",
+          "context": "<Bar yAxisId=\"right\" dataKey=\"orders\" fill=\"#10B981\" name=\"Orders\" radius={[4, 4, 0, 0]} />"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/DetailedInventoryAnalysis.jsx",
+      "matchCount": 22,
+      "matches": [
+        {
+          "line": 8,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899'];"
+        },
+        {
+          "line": 8,
+          "type": "hex",
+          "match": "#10B981",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899'];"
+        },
+        {
+          "line": 8,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899'];"
+        },
+        {
+          "line": 8,
+          "type": "hex",
+          "match": "#EC4899",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899'];"
+        },
+        {
+          "line": 73,
+          "type": "hex",
+          "match": "#9CA3AF",
+          "context": "const tickColor = isDark ? '#9CA3AF' : '#6B7280';"
+        },
+        {
+          "line": 73,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "const tickColor = isDark ? '#9CA3AF' : '#6B7280';"
+        },
+        {
+          "line": 74,
+          "type": "hex",
+          "match": "#374151",
+          "context": "const gridColor = isDark ? '#374151' : '#E5E7EB';"
+        },
+        {
+          "line": 74,
+          "type": "hex",
+          "match": "#E5E7EB",
+          "context": "const gridColor = isDark ? '#374151' : '#E5E7EB';"
+        },
+        {
+          "line": 76,
+          "type": "hex",
+          "match": "#1F2937",
+          "context": "backgroundColor: isDark ? '#1F2937' : 'white',"
+        },
+        {
+          "line": 79,
+          "type": "rgb",
+          "match": "rgba(0, 0, 0, 0.1)",
+          "context": "boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',"
+        },
+        {
+          "line": 81,
+          "type": "hex",
+          "match": "#F9FAFB",
+          "context": "color: isDark ? '#F9FAFB' : '#111827'"
+        },
+        {
+          "line": 81,
+          "type": "hex",
+          "match": "#111827",
+          "context": "color: isDark ? '#F9FAFB' : '#111827'"
+        },
+        {
+          "line": 173,
+          "type": "hex",
+          "match": "#F3F4F6",
+          "context": "cursor={{ fill: isDark ? 'rgba(75, 85, 99, 0.3)' : '#F3F4F6' }}"
+        },
+        {
+          "line": 173,
+          "type": "rgb",
+          "match": "rgba(75, 85, 99, 0.3)",
+          "context": "cursor={{ fill: isDark ? 'rgba(75, 85, 99, 0.3)' : '#F3F4F6' }}"
+        },
+        {
+          "line": 175,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<Bar dataKey=\"value\" fill=\"#4F46E5\" radius={[6, 6, 0, 0]} maxBarSize={60}>"
+        },
+        {
+          "line": 177,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<Cell key={index} fill={`#4F46E5${index % 2 === 0 ? 'FF' : 'CC'}`} />"
+        },
+        {
+          "line": 205,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<Line type=\"monotone\" dataKey=\"inStock\" stroke=\"#4F46E5\" strokeWidth={2.5} dot={{ fill: '#4F46E5', strokeWidth: 2 }} name=\"In Stock\" />"
+        },
+        {
+          "line": 205,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<Line type=\"monotone\" dataKey=\"inStock\" stroke=\"#4F46E5\" strokeWidth={2.5} dot={{ fill: '#4F46E5', strokeWidth: 2 }} name=\"In Stock\" />"
+        },
+        {
+          "line": 206,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "<Line type=\"monotone\" dataKey=\"lowStock\" stroke=\"#F59E0B\" strokeWidth={2.5} dot={{ fill: '#F59E0B', strokeWidth: 2 }} name=\"Low Stock\" />"
+        },
+        {
+          "line": 206,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "<Line type=\"monotone\" dataKey=\"lowStock\" stroke=\"#F59E0B\" strokeWidth={2.5} dot={{ fill: '#F59E0B', strokeWidth: 2 }} name=\"Low Stock\" />"
+        },
+        {
+          "line": 207,
+          "type": "hex",
+          "match": "#EF4444",
+          "context": "<Line type=\"monotone\" dataKey=\"outOfStock\" stroke=\"#EF4444\" strokeWidth={2.5} dot={{ fill: '#EF4444', strokeWidth: 2 }} name=\"Out of Stock\" />"
+        },
+        {
+          "line": 207,
+          "type": "hex",
+          "match": "#EF4444",
+          "context": "<Line type=\"monotone\" dataKey=\"outOfStock\" stroke=\"#EF4444\" strokeWidth={2.5} dot={{ fill: '#EF4444', strokeWidth: 2 }} name=\"Out of Stock\" />"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/DynamicCharts.jsx",
+      "matchCount": 36,
+      "matches": [
+        {
+          "line": 9,
+          "type": "hex",
+          "match": "#4ECDC4",
+          "context": "primary: ['#4ECDC4', '#45B7D1', '#96CEB4'],"
+        },
+        {
+          "line": 9,
+          "type": "hex",
+          "match": "#45B7D1",
+          "context": "primary: ['#4ECDC4', '#45B7D1', '#96CEB4'],"
+        },
+        {
+          "line": 9,
+          "type": "hex",
+          "match": "#96CEB4",
+          "context": "primary: ['#4ECDC4', '#45B7D1', '#96CEB4'],"
+        },
+        {
+          "line": 10,
+          "type": "hex",
+          "match": "#FFD93D",
+          "context": "secondary: ['#FFD93D', '#FF6B6B', '#F38181'],"
+        },
+        {
+          "line": 10,
+          "type": "hex",
+          "match": "#FF6B6B",
+          "context": "secondary: ['#FFD93D', '#FF6B6B', '#F38181'],"
+        },
+        {
+          "line": 10,
+          "type": "hex",
+          "match": "#F38181",
+          "context": "secondary: ['#FFD93D', '#FF6B6B', '#F38181'],"
+        },
+        {
+          "line": 11,
+          "type": "hex",
+          "match": "#6C63FF",
+          "context": "accent: ['#6C63FF', '#8884d8', '#7158e2'],"
+        },
+        {
+          "line": 11,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "accent: ['#6C63FF', '#8884d8', '#7158e2'],"
+        },
+        {
+          "line": 11,
+          "type": "hex",
+          "match": "#7158e2",
+          "context": "accent: ['#6C63FF', '#8884d8', '#7158e2'],"
+        },
+        {
+          "line": 12,
+          "type": "hex",
+          "match": "#4B4453",
+          "context": "neutral: ['#4B4453', '#6D6875', '#8A817C']"
+        },
+        {
+          "line": 12,
+          "type": "hex",
+          "match": "#6D6875",
+          "context": "neutral: ['#4B4453', '#6D6875', '#8A817C']"
+        },
+        {
+          "line": 12,
+          "type": "hex",
+          "match": "#8A817C",
+          "context": "neutral: ['#4B4453', '#6D6875', '#8A817C']"
+        },
+        {
+          "line": 120,
+          "type": "hex",
+          "match": "#FF6B6B",
+          "context": "let color = '#FF6B6B';"
+        },
+        {
+          "line": 124,
+          "type": "hex",
+          "match": "#4ECDC4",
+          "context": "color = '#4ECDC4';"
+        },
+        {
+          "line": 127,
+          "type": "hex",
+          "match": "#FFD93D",
+          "context": "color = '#FFD93D';"
+        },
+        {
+          "line": 311,
+          "type": "hex",
+          "match": "#1e293b",
+          "context": "<p key={index} className=\"text-sm\" style={{ color: entry.color || '#1e293b' }}>"
+        },
+        {
+          "line": 311,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<p key={index} className=\"text-sm\" style={{ color: entry.color || '#1e293b' }}>"
+        },
+        {
+          "line": 370,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<CartesianGrid strokeDasharray=\"3 3\" stroke=\"rgba(0,0,0,0.1)\" />"
+        },
+        {
+          "line": 371,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<XAxis dataKey=\"size\" stroke=\"#475569\" />"
+        },
+        {
+          "line": 372,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<YAxis stroke=\"#475569\" label={{ value: 'Total Units Sold', angle: -90, position: 'insideLeft', fill: '#475569', dy: 40 }} />"
+        },
+        {
+          "line": 372,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<YAxis stroke=\"#475569\" label={{ value: 'Total Units Sold', angle: -90, position: 'insideLeft', fill: '#475569', dy: 40 }} />"
+        },
+        {
+          "line": 398,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "<stop offset=\"5%\" stopColor=\"#8884d8\" stopOpacity={0.8}/>"
+        },
+        {
+          "line": 399,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "<stop offset=\"95%\" stopColor=\"#8884d8\" stopOpacity={0}/>"
+        },
+        {
+          "line": 402,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<CartesianGrid strokeDasharray=\"3 3\" stroke=\"rgba(0,0,0,0.1)\" />"
+        },
+        {
+          "line": 403,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<XAxis dataKey=\"month\" stroke=\"#475569\" />"
+        },
+        {
+          "line": 404,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<YAxis stroke=\"#475569\" />"
+        },
+        {
+          "line": 406,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "<Area type=\"monotone\" dataKey=\"revenue\" stroke=\"#8884d8\" fill=\"url(#revenueGradient)\" />"
+        },
+        {
+          "line": 425,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<CartesianGrid strokeDasharray=\"3 3\" stroke=\"rgba(0,0,0,0.1)\" />"
+        },
+        {
+          "line": 426,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<XAxis type=\"number\" stroke=\"#475569\" />"
+        },
+        {
+          "line": 427,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<YAxis dataKey=\"name\" type=\"category\" stroke=\"#475569\" width={100} />"
+        },
+        {
+          "line": 451,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<CartesianGrid strokeDasharray=\"3 3\" stroke=\"rgba(0,0,0,0.1)\" />"
+        },
+        {
+          "line": 452,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<XAxis type=\"number\" stroke=\"#475569\" />"
+        },
+        {
+          "line": 453,
+          "type": "hex",
+          "match": "#475569",
+          "context": "<YAxis dataKey=\"name\" type=\"category\" stroke=\"#475569\" width={100} />"
+        },
+        {
+          "line": 456,
+          "type": "hex",
+          "match": "#4ECDC4",
+          "context": "<Bar dataKey=\"inStock\" name=\"In Stock\" stackId=\"a\" fill=\"#4ECDC4\" />"
+        },
+        {
+          "line": 457,
+          "type": "hex",
+          "match": "#FFD93D",
+          "context": "<Bar dataKey=\"lowStock\" name=\"Low Stock\" stackId=\"a\" fill=\"#FFD93D\" />"
+        },
+        {
+          "line": 458,
+          "type": "hex",
+          "match": "#FF6B6B",
+          "context": "<Bar dataKey=\"outOfStock\" name=\"Out of Stock\" stackId=\"a\" fill=\"#FF6B6B\" />"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/InventoryStatus.jsx",
+      "matchCount": 13,
+      "matches": [
+        {
+          "line": 11,
+          "type": "hex",
+          "match": "#22c55e",
+          "context": "{ name: 'In Stock', value: 1250, color: isDark ? '#22c55e' : '#16a34a' },"
+        },
+        {
+          "line": 11,
+          "type": "hex",
+          "match": "#16a34a",
+          "context": "{ name: 'In Stock', value: 1250, color: isDark ? '#22c55e' : '#16a34a' },"
+        },
+        {
+          "line": 12,
+          "type": "hex",
+          "match": "#facc15",
+          "context": "{ name: 'Low Stock', value: 150, color: isDark ? '#facc15' : '#f59e0b' },"
+        },
+        {
+          "line": 12,
+          "type": "hex",
+          "match": "#f59e0b",
+          "context": "{ name: 'Low Stock', value: 150, color: isDark ? '#facc15' : '#f59e0b' },"
+        },
+        {
+          "line": 13,
+          "type": "hex",
+          "match": "#ef4444",
+          "context": "{ name: 'Out of Stock', value: 45, color: isDark ? '#ef4444' : '#dc2626' },"
+        },
+        {
+          "line": 13,
+          "type": "hex",
+          "match": "#dc2626",
+          "context": "{ name: 'Out of Stock', value: 45, color: isDark ? '#ef4444' : '#dc2626' },"
+        },
+        {
+          "line": 76,
+          "type": "hex",
+          "match": "#1f2937",
+          "context": "<Cell key={`cell-${index}`} fill={entry.color} stroke={isDark ? '#1f2937' : '#ffffff'} />"
+        },
+        {
+          "line": 76,
+          "type": "hex",
+          "match": "#ffffff",
+          "context": "<Cell key={`cell-${index}`} fill={entry.color} stroke={isDark ? '#1f2937' : '#ffffff'} />"
+        },
+        {
+          "line": 82,
+          "type": "rgb",
+          "match": "rgba(31, 41, 55, 0.8)",
+          "context": "backgroundColor: isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.9)',"
+        },
+        {
+          "line": 82,
+          "type": "rgb",
+          "match": "rgba(255, 255, 255, 0.9)",
+          "context": "backgroundColor: isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.9)',"
+        },
+        {
+          "line": 83,
+          "type": "hex",
+          "match": "#e5e7eb",
+          "context": "borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#e5e7eb',"
+        },
+        {
+          "line": 83,
+          "type": "rgb",
+          "match": "rgba(255, 255, 255, 0.2)",
+          "context": "borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#e5e7eb',"
+        },
+        {
+          "line": 99,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<span className=\"w-3 h-3 rounded-full\" style={{ backgroundColor: d.color }}></span>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/visualizations/SchoolComparison.jsx",
+      "matchCount": 2,
+      "matches": [
+        {
+          "line": 44,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "stroke=\"#4F46E5\""
+        },
+        {
+          "line": 45,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "fill=\"#4F46E5\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/visualizations/SizeDistribution.jsx",
+      "matchCount": 9,
+      "matches": [
+        {
+          "line": 7,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "S: '#4F46E5',"
+        },
+        {
+          "line": 8,
+          "type": "hex",
+          "match": "#10B981",
+          "context": "M: '#10B981',"
+        },
+        {
+          "line": 9,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "L: '#F59E0B',"
+        },
+        {
+          "line": 10,
+          "type": "hex",
+          "match": "#EC4899",
+          "context": "XL: '#EC4899'"
+        },
+        {
+          "line": 65,
+          "type": "hex",
+          "match": "#fff",
+          "context": "stroke=\"#fff\""
+        },
+        {
+          "line": 66,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "fill=\"#8884d8\""
+        },
+        {
+          "line": 76,
+          "type": "hex",
+          "match": "#8884d8",
+          "context": "fill: COLORS[name.split(' ')[0]] || '#8884d8',"
+        },
+        {
+          "line": 77,
+          "type": "hex",
+          "match": "#fff",
+          "context": "stroke: '#fff',"
+        },
+        {
+          "line": 87,
+          "type": "hex",
+          "match": "#fff",
+          "context": "fill=\"#fff\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/dashboard/visualizations/StockAnalytics.jsx",
+      "matchCount": 6,
+      "matches": [
+        {
+          "line": 12,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<p key={index} className=\"text-sm\" style={{ color: entry.color }}>"
+        },
+        {
+          "line": 55,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 60,
+          "type": "hex",
+          "match": "#6B7280",
+          "context": "tick={{ fill: '#6B7280' }}"
+        },
+        {
+          "line": 65,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<Bar dataKey=\"stock\" fill=\"#4F46E5\" name=\"Current Stock\" />"
+        },
+        {
+          "line": 69,
+          "type": "hex",
+          "match": "#10B981",
+          "context": "stroke=\"#10B981\""
+        },
+        {
+          "line": 77,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "stroke=\"#F59E0B\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/Layout.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 376,
+          "type": "hex",
+          "match": "#2A2B32",
+          "context": ": 'text-gray-300 hover:bg-[#2A2B32]'"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/Logo.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 5,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<span className=\"text-3xl font-black text-primary-foreground font-[Inter] tracking-tighter transform -rotate-12 group-hover:rotate-0 transition-transform duration-500\" style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.1)' }}>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/reports/ForecastCard.jsx",
+      "matchCount": 9,
+      "matches": [
+        {
+          "line": 20,
+          "type": "hex",
+          "match": "#6b7280",
+          "context": "<XAxis dataKey=\"category\" stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 20,
+          "type": "rgb",
+          "match": "rgb(156 163 175 / 0.7)",
+          "context": "<XAxis dataKey=\"category\" stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 21,
+          "type": "hex",
+          "match": "#6b7280",
+          "context": "<YAxis stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 21,
+          "type": "rgb",
+          "match": "rgb(156 163 175 / 0.7)",
+          "context": "<YAxis stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 24,
+          "type": "rgb",
+          "match": "rgb(31 41 55 / 0.8)",
+          "context": "backgroundColor: isDark ? 'rgb(31 41 55 / 0.8)' : 'white',"
+        },
+        {
+          "line": 27,
+          "type": "rgb",
+          "match": "rgba(0, 0, 0, 0.1)",
+          "context": "boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',"
+        },
+        {
+          "line": 29,
+          "type": "hex",
+          "match": "#ffffff",
+          "context": "itemStyle={{ color: isDark ? '#ffffff' : '#1F2937' }}"
+        },
+        {
+          "line": 29,
+          "type": "hex",
+          "match": "#1F2937",
+          "context": "itemStyle={{ color: isDark ? '#ffffff' : '#1F2937' }}"
+        },
+        {
+          "line": 31,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "<Bar dataKey=\"quantity\" fill=\"#4F46E5\" radius={[4, 4, 0, 0]}>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/reports/QualityMetricsCard.jsx",
+      "matchCount": 11,
+      "matches": [
+        {
+          "line": 20,
+          "type": "rgb",
+          "match": "rgb(156 163 175 / 0.2)",
+          "context": "<CartesianGrid strokeDasharray=\"3 3\" stroke={isDark ? \"rgb(156 163 175 / 0.2)\" : \"rgb(229 231 235)\"} />"
+        },
+        {
+          "line": 20,
+          "type": "rgb",
+          "match": "rgb(229 231 235)",
+          "context": "<CartesianGrid strokeDasharray=\"3 3\" stroke={isDark ? \"rgb(156 163 175 / 0.2)\" : \"rgb(229 231 235)\"} />"
+        },
+        {
+          "line": 21,
+          "type": "hex",
+          "match": "#6b7280",
+          "context": "<XAxis dataKey=\"month\" stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 21,
+          "type": "rgb",
+          "match": "rgb(156 163 175 / 0.7)",
+          "context": "<XAxis dataKey=\"month\" stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 22,
+          "type": "hex",
+          "match": "#6b7280",
+          "context": "<YAxis domain={[0, 100]} stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 22,
+          "type": "rgb",
+          "match": "rgb(156 163 175 / 0.7)",
+          "context": "<YAxis domain={[0, 100]} stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 25,
+          "type": "rgb",
+          "match": "rgb(31 41 55 / 0.8)",
+          "context": "backgroundColor: isDark ? 'rgb(31 41 55 / 0.8)' : 'white',"
+        },
+        {
+          "line": 28,
+          "type": "rgb",
+          "match": "rgba(0, 0, 0, 0.1)",
+          "context": "boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',"
+        },
+        {
+          "line": 30,
+          "type": "hex",
+          "match": "#ffffff",
+          "context": "itemStyle={{ color: isDark ? '#ffffff' : '#1F2937' }}"
+        },
+        {
+          "line": 30,
+          "type": "hex",
+          "match": "#1F2937",
+          "context": "itemStyle={{ color: isDark ? '#ffffff' : '#1F2937' }}"
+        },
+        {
+          "line": 35,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "stroke=\"#4F46E5\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/reports/SchoolAnalytics.jsx",
+      "matchCount": 5,
+      "matches": [
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B'];"
+        },
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#10B981",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B'];"
+        },
+        {
+          "line": 4,
+          "type": "hex",
+          "match": "#F59E0B",
+          "context": "const COLORS = ['#4F46E5', '#10B981', '#F59E0B'];"
+        },
+        {
+          "line": 83,
+          "type": "rgb",
+          "match": "rgba(0, 0, 0, 0.1)",
+          "context": "boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'"
+        },
+        {
+          "line": 94,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<div className=\"text-sm font-medium\" style={{ color: COLORS[index] }}>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/reports/SizeDistributionChart.jsx",
+      "matchCount": 9,
+      "matches": [
+        {
+          "line": 39,
+          "type": "hex",
+          "match": "#6b7280",
+          "context": "<XAxis dataKey=\"size\" stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 39,
+          "type": "rgb",
+          "match": "rgb(156 163 175 / 0.7)",
+          "context": "<XAxis dataKey=\"size\" stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 40,
+          "type": "hex",
+          "match": "#6b7280",
+          "context": "<YAxis stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 40,
+          "type": "rgb",
+          "match": "rgb(156 163 175 / 0.7)",
+          "context": "<YAxis stroke={isDark ? \"rgb(156 163 175 / 0.7)\" : \"#6b7280\"} />"
+        },
+        {
+          "line": 43,
+          "type": "rgb",
+          "match": "rgb(31 41 55 / 0.8)",
+          "context": "backgroundColor: isDark ? 'rgb(31 41 55 / 0.8)' : 'white',"
+        },
+        {
+          "line": 46,
+          "type": "rgb",
+          "match": "rgba(0, 0, 0, 0.1)",
+          "context": "boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',"
+        },
+        {
+          "line": 48,
+          "type": "hex",
+          "match": "#ffffff",
+          "context": "itemStyle={{ color: isDark ? '#ffffff' : '#1F2937' }}"
+        },
+        {
+          "line": 48,
+          "type": "hex",
+          "match": "#1F2937",
+          "context": "itemStyle={{ color: isDark ? '#ffffff' : '#1F2937' }}"
+        },
+        {
+          "line": 52,
+          "type": "hex",
+          "match": "#4F46E5",
+          "context": "fill=\"#4F46E5\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/SchoolSelect.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 26,
+          "type": "hex",
+          "match": "#1F2129",
+          "context": "className=\"block w-full h-12 px-4 rounded-lg bg-[#1F2129] text-white border border-transparent focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200 appearance-none pr-10\""
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/ui/Button.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 16,
+          "type": "hex",
+          "match": "#1F2129",
+          "context": "secondary: 'bg-[#1F2129] hover:bg-gray-800 text-white focus:ring-gray-500/50',"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/ui/Card.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 11,
+          "type": "hex",
+          "match": "#1F2129",
+          "context": "<div className={`bg-[#1F2129] rounded-lg border border-gray-800 ${className}`}>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/ui/Input.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 28,
+          "type": "hex",
+          "match": "#1F2129",
+          "context": "bg-[#1F2129] text-white"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/ui/LoadingSpinner.css",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 8,
+          "type": "rgb",
+          "match": "rgba(0, 0, 0, 0.1)",
+          "context": "border: 3px solid rgba(0, 0, 0, 0.1);"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/components/ui/Select.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 9,
+          "type": "hex",
+          "match": "#1F2129",
+          "context": "className={`block w-full h-12 px-4 rounded-lg bg-[#1F2129] text-white border border-transparent focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200 appearance-none pr-10 ${className || ''}`}"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/AddProductNew.jsx",
+      "matchCount": 14,
+      "matches": [
+        {
+          "line": 61,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<select {...props} className={`block w-full h-12 px-4 rounded-lg bg-white dark:bg-background text-gr"
+        },
+        {
+          "line": 114,
+          "type": "hex",
+          "match": "#000000",
+          "context": "name: '', type: RAW_MATERIAL_TYPES[0], unit: UNITS[0], price: '', quantity: '', color: '#000000'"
+        },
+        {
+          "line": 293,
+          "type": "hex",
+          "match": "#000000",
+          "context": "color: colorsForVariant.length > 0 ? colorsForVariant[0] : '#000000',"
+        },
+        {
+          "line": 305,
+          "type": "hex",
+          "match": "#000000",
+          "context": "color: '#000000',"
+        },
+        {
+          "line": 355,
+          "type": "hex",
+          "match": "#000000",
+          "context": "const firstColor = colorsForNewVariant.length > 0 ? colorsForNewVariant[0] : '#000000';"
+        },
+        {
+          "line": 436,
+          "type": "hex",
+          "match": "#000000",
+          "context": "color: '#000000',"
+        },
+        {
+          "line": 470,
+          "type": "hex",
+          "match": "#000000",
+          "context": "const firstColor = colorsForVariant.length > 0 ? colorsForVariant[0] : '#000000';"
+        },
+        {
+          "line": 565,
+          "type": "hex",
+          "match": "#000000",
+          "context": "color: colorsForVariant.length > 0 ? colorsForVariant[0] : '#000000',"
+        },
+        {
+          "line": 575,
+          "type": "hex",
+          "match": "#000000",
+          "context": "color: '#000000',"
+        },
+        {
+          "line": 769,
+          "type": "hex",
+          "match": "#000000",
+          "context": "color: '#000000'"
+        },
+        {
+          "line": 783,
+          "type": "hex",
+          "match": "#000000",
+          "context": "color: \"#000000\","
+        },
+        {
+          "line": 946,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<span className=\"inline-block w-4 h-4 rounded-full border border-gray-300 dark:border-input/30\" styl"
+        },
+        {
+          "line": 993,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "style={{ backgroundColor: variant.color }}"
+        },
+        {
+          "line": 1289,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<button type=\"button\" className=\"h-12 w-12 rounded-lg border border-gray-300 dark:border-gray-700\" s"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/BatchDetails.jsx",
+      "matchCount": 2,
+      "matches": [
+        {
+          "line": 241,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<div className=\"w-4 h-4 rounded-full border dark:border-gray-600\" style={{ backgroundColor: variant."
+        },
+        {
+          "line": 372,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<div className=\"w-4 h-4 rounded-full border dark:border-gray-600\" style={{ backgroundColor: item.col"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/BatchInventoryDetail.jsx",
+      "matchCount": 3,
+      "matches": [
+        {
+          "line": 209,
+          "type": "hex",
+          "match": "#e5e7eb",
+          "context": "border: variant.color.toLowerCase() === 'white' ? '1px solid #e5e7eb' : 'none'"
+        },
+        {
+          "line": 329,
+          "type": "hex",
+          "match": "#e5e7eb",
+          "context": "border: color.toLowerCase() === 'white' ? '1px solid #e5e7eb' : 'none'"
+        },
+        {
+          "line": 404,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "<div className=\"w-4 h-4 rounded-full border dark:border-gray-600\" style={{ backgroundColor: item.col"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/EmailVerification.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 99,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<span className=\"text-5xl font-black text-white font-[Inter] tracking-tighter transform -rotate-12 group-hover:rotate-0 transition-transform duration-500\" style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.1)' }}>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/Inventory.jsx",
+      "matchCount": 2,
+      "matches": [
+        {
+          "line": 371,
+          "type": "rgb",
+          "match": "rgb(0, 0, 0)",
+          "context": "color: rgb(0, 0, 0),"
+        },
+        {
+          "line": 383,
+          "type": "rgb",
+          "match": "rgb(0, 0, 0)",
+          "context": "color: rgb(0, 0, 0),"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/Login.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 73,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<span className=\"text-5xl font-black text-white font-[Inter] tracking-tighter transform -rotate-12 group-hover:rotate-0 transition-transform duration-500\" style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.1)' }}>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/ProductDetails.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 328,
+          "type": "inline",
+          "match": "inline style with color",
+          "context": "style={{ backgroundColor: variant.color.toLowerCase() }}"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/pages/Signup.jsx",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 156,
+          "type": "rgb",
+          "match": "rgba(0,0,0,0.1)",
+          "context": "<span className=\"text-5xl font-black text-white font-[Inter] tracking-tighter transform -rotate-12 group-hover:rotate-0 transition-transform duration-500\" style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.1)' }}>"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/styles/Layout.css",
+      "matchCount": 3,
+      "matches": [
+        {
+          "line": 8,
+          "type": "hex",
+          "match": "#1a237e",
+          "context": "background-color: #1a237e;"
+        },
+        {
+          "line": 36,
+          "type": "rgb",
+          "match": "rgba(255, 255, 255, 0.1)",
+          "context": "background-color: rgba(255, 255, 255, 0.1);"
+        },
+        {
+          "line": 42,
+          "type": "hex",
+          "match": "#f5f5f5",
+          "context": "background-color: #f5f5f5;"
+        }
+      ]
+    },
+    {
+      "path": "C:/Users/Administrator/Videos/MonishaInventoryApp/web/src/utils/chartColors.js",
+      "matchCount": 1,
+      "matches": [
+        {
+          "line": 53,
+          "type": "rgb",
+          "match": "rgba(255, 255, 255, 0.1)",
+          "context": "grid: isDark ? 'rgba(255, 255, 255, 0.1)' : getHSLColor('border'),"
+        }
+      ]
+    }
+  ],
+  "colorsByType": {
+    "hex": [
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\AddableSelect.jsx",
+        "line": 31,
+        "color": "#1F2129"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\AddableSelect.jsx",
+        "line": 61,
+        "color": "#1F2129"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InteractiveChart.jsx",
+        "line": 135,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InteractiveChart.jsx",
+        "line": 140,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InteractiveChart.jsx",
+        "line": 167,
+        "color": "#8884d8"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InteractiveChart.jsx",
+        "line": 194,
+        "color": "#8884d8"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InventoryTrends.jsx",
+        "line": 52,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InventoryTrends.jsx",
+        "line": 57,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InventoryTrends.jsx",
+        "line": 65,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InventoryTrends.jsx",
+        "line": 73,
+        "color": "#10B981"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InventoryTrends.jsx",
+        "line": 81,
+        "color": "#F59E0B"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\ProductDistribution.jsx",
+        "line": 4,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\ProductDistribution.jsx",
+        "line": 4,
+        "color": "#10B981"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\ProductDistribution.jsx",
+        "line": 4,
+        "color": "#F59E0B"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\ProductDistribution.jsx",
+        "line": 4,
+        "color": "#EC4899"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\ProductDistribution.jsx",
+        "line": 4,
+        "color": "#8B5CF6"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\ProductDistribution.jsx",
+        "line": 68,
+        "color": "#8884d8"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\RevenueChart.jsx",
+        "line": 55,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\RevenueChart.jsx",
+        "line": 56,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\RevenueChart.jsx",
+        "line": 64,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\RevenueChart.jsx",
+        "line": 69,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\RevenueChart.jsx",
+        "line": 81,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\SchoolPerformance.jsx",
+        "line": 43,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\SchoolPerformance.jsx",
+        "line": 53,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\SchoolPerformance.jsx",
+        "line": 62,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\SchoolPerformance.jsx",
+        "line": 67,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\SchoolPerformance.jsx",
+        "line": 68,
+        "color": "#10B981"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 8,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 8,
+        "color": "#10B981"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 8,
+        "color": "#F59E0B"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 8,
+        "color": "#EC4899"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 73,
+        "color": "#9CA3AF"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 73,
+        "color": "#6B7280"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 74,
+        "color": "#374151"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 74,
+        "color": "#E5E7EB"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 76,
+        "color": "#1F2937"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 81,
+        "color": "#F9FAFB"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 81,
+        "color": "#111827"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 173,
+        "color": "#F3F4F6"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 175,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 177,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 205,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 205,
+        "color": "#4F46E5"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 206,
+        "color": "#F59E0B"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 206,
+        "color": "#F59E0B"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 207,
+        "color": "#EF4444"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 207,
+        "color": "#EF4444"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 9,
+        "color": "#4ECDC4"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 9,
+        "color": "#45B7D1"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 9,
+        "color": "#96CEB4"
+      }
+    ],
+    "rgb": [
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 79,
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DetailedInventoryAnalysis.jsx",
+        "line": 173,
+        "color": "rgba(75, 85, 99, 0.3)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 370,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 402,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 425,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 451,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\InventoryStatus.jsx",
+        "line": 82,
+        "color": "rgba(31, 41, 55, 0.8)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\InventoryStatus.jsx",
+        "line": 82,
+        "color": "rgba(255, 255, 255, 0.9)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\InventoryStatus.jsx",
+        "line": 83,
+        "color": "rgba(255, 255, 255, 0.2)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\Logo.jsx",
+        "line": 5,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\ForecastCard.jsx",
+        "line": 20,
+        "color": "rgb(156 163 175 / 0.7)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\ForecastCard.jsx",
+        "line": 21,
+        "color": "rgb(156 163 175 / 0.7)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\ForecastCard.jsx",
+        "line": 24,
+        "color": "rgb(31 41 55 / 0.8)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\ForecastCard.jsx",
+        "line": 27,
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\QualityMetricsCard.jsx",
+        "line": 20,
+        "color": "rgb(156 163 175 / 0.2)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\QualityMetricsCard.jsx",
+        "line": 20,
+        "color": "rgb(229 231 235)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\QualityMetricsCard.jsx",
+        "line": 21,
+        "color": "rgb(156 163 175 / 0.7)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\QualityMetricsCard.jsx",
+        "line": 22,
+        "color": "rgb(156 163 175 / 0.7)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\QualityMetricsCard.jsx",
+        "line": 25,
+        "color": "rgb(31 41 55 / 0.8)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\QualityMetricsCard.jsx",
+        "line": 28,
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\SchoolAnalytics.jsx",
+        "line": 83,
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\SizeDistributionChart.jsx",
+        "line": 39,
+        "color": "rgb(156 163 175 / 0.7)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\SizeDistributionChart.jsx",
+        "line": 40,
+        "color": "rgb(156 163 175 / 0.7)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\SizeDistributionChart.jsx",
+        "line": 43,
+        "color": "rgb(31 41 55 / 0.8)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\SizeDistributionChart.jsx",
+        "line": 46,
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\ui\\LoadingSpinner.css",
+        "line": 8,
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\EmailVerification.jsx",
+        "line": 99,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\Inventory.jsx",
+        "line": 371,
+        "color": "rgb(0, 0, 0)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\Inventory.jsx",
+        "line": 383,
+        "color": "rgb(0, 0, 0)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\Login.jsx",
+        "line": 73,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\Signup.jsx",
+        "line": 156,
+        "color": "rgba(0,0,0,0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\styles\\Layout.css",
+        "line": 36,
+        "color": "rgba(255, 255, 255, 0.1)"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\utils\\chartColors.js",
+        "line": 53,
+        "color": "rgba(255, 255, 255, 0.1)"
+      }
+    ],
+    "hsl": [],
+    "inline": [
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InteractiveChart.jsx",
+        "line": 152,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InteractiveChart.jsx",
+        "line": 212,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\InventoryTrends.jsx",
+        "line": 13,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\charts\\ProductDistribution.jsx",
+        "line": 87,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\DynamicCharts.jsx",
+        "line": 311,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\InventoryStatus.jsx",
+        "line": 99,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\dashboard\\visualizations\\StockAnalytics.jsx",
+        "line": 12,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\components\\reports\\SchoolAnalytics.jsx",
+        "line": 94,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\AddProductNew.jsx",
+        "line": 61,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\AddProductNew.jsx",
+        "line": 946,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\AddProductNew.jsx",
+        "line": 993,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\AddProductNew.jsx",
+        "line": 1289,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\BatchDetails.jsx",
+        "line": 241,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\BatchDetails.jsx",
+        "line": 372,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\BatchInventoryDetail.jsx",
+        "line": 404,
+        "color": "inline-style"
+      },
+      {
+        "file": "C:\\Users\\Administrator\\Videos\\MonishaInventoryApp\\web\\src\\pages\\ProductDetails.jsx",
+        "line": 328,
+        "color": "inline-style"
+      }
+    ]
+  }
+}

@@ -1,0 +1,139 @@
+# Developer's Guide to Fetching Product Data from Firestore
+
+**Version:** 2.0
+**Purpose:** This guide provides a clear, step-by-step process for fetching complete product information from the shared Firestore database for the E-commerce application. It specifically addresses how to get product details, price, and stock levels, which are stored across separate collections.
+**Crucial Distinction:** There are two `price` fields. The e-commerce app must use the **selling price** from `uniform_variants`, not the cost price from `batchInventory`.
+
+---
+
+## 1. Core Collections Overview
+
+To assemble a single product for display on the e-commerce site, you need to query three different collections:
+
+1.  `uniforms`: The main product catalog (e.g., "School Blazer").
+2.  `uniform_variants`: The different versions of a product (e.g., "Navy Blue" blazer). **This is where the *SELLING PRICE* is stored.**
+3.  `batchInventory`: The real-time stock levels for each specific size/SKU. **This is where *QUANTITY* and *COST PRICE* are stored.**
+
+**Warning:** There is a `price` field in `batchInventory`. This represents the **cost of goods** for that batch and **MUST NOT** be displayed to the customer. The customer-facing price is **only** in `uniform_variants`.
+
+---
+
+## 2. Collection Structures & Sample Data
+
+Here is what a sample document looks like in each collection.
+
+### 2.1. `uniforms` Collection
+
+This holds the basic product info. (No changes from v1.0)
+
+-   **Purpose:** The main product catalog.
+-   **Sample Document:**
+    ```json
+    {
+      "id": "abc123",
+      "name": "School Shirt",
+      "description": "A high-quality school shirt for daily wear.",
+      "category": "Shirts",
+      "isActive": true,
+      "media": [
+        { "type": "image", "url": "https://example.com/shirt.jpg" }
+      ]
+    }
+    ```
+
+### 2.2. `uniform_variants` Collection
+
+This holds the variations (like color) and, most importantly, the **SELLING PRICE** for each size.
+
+-   **Purpose:** Defines product variations and stores the customer-facing **selling price**.
+-   **Sample Document:**
+    ```json
+    {
+      "id": "xyz789",
+      "uniformId": "abc123", // <-- Links to the 'uniforms' collection
+      "color": "White",
+      "sizes": [
+        {
+          "size": "S",
+          "price": 15.99,  // <-- SELLING PRICE IS HERE
+          "sku": "SHIRT-WHT-S"
+        },
+        {
+          "size": "M",
+          "price": 16.99,  // <-- SELLING PRICE IS HERE
+          "sku": "SHIRT-WHT-M"
+        }
+      ]
+    }
+    ```
+
+### 2.3. `batchInventory` Collection
+
+This holds the **quantity** of stock available and the **cost price** for each specific SKU within a batch.
+
+-   **Purpose:** The source of truth for real-time stock counts and cost of goods.
+-   **Sample Document:**
+    ```json
+    {
+      "id": "batch001",
+      "batchName": "Spring 2024 Stock",
+      "items": [
+        {
+          "uniformId": "abc123",
+          "variantId": "xyz789",
+          "sizes": [
+            {
+              "size": "S",
+              "sku": "SHIRT-WHT-S",
+              "quantity": 50, // <-- QUANTITY IS HERE
+              "price": 8.50    // <-- COST PRICE. DO NOT SHOW TO CUSTOMER.
+            },
+            {
+              "size": "M",
+              "sku": "SHIRT-WHT-M",
+              "quantity": 35, // <-- QUANTITY IS HERE
+              "price": 9.00    // <-- COST PRICE. DO NOT SHOW TO CUSTOMER.
+            }
+          ]
+        }
+      ]
+    }
+    ```
+
+---
+
+## 3. Step-by-Step Fetching Logic
+
+The logic for fetching data remains the same, but the distinction in which `price` to use is critical. The front-end should **ignore** the price from `batchInventory`.
+
+**Goal:** Assemble a single "product" object that looks like this:
+```json
+{
+  "id": "abc123",
+  "name": "School Shirt",
+  "description": "...",
+  "media": [...],
+  "variants": [
+    {
+      "id": "xyz789",
+      "color": "White",
+      "sizes": [
+        {
+          "size": "S",
+          "price": 15.99,       // <-- Selling price from uniform_variants
+          "sku": "SHIRT-WHT-S",
+          "stock": 50           // <-- Quantity from batchInventory
+        },
+        {
+          "size": "M",
+          "price": 16.99,       // <-- Selling price from uniform_variants
+          "sku": "SHIRT-WHT-M",
+          "stock": 35           // <-- Quantity from batchInventory
+        }
+      ]
+    }
+  ]
+}
+```
+
+The 4-step process described previously (Fetch Uniforms -> Fetch Variants -> Fetch Stock -> Combine Data) is still correct. The key is that during the "Combine Data" step, the code must be careful to take `price` from the variant object and `stock` from the inventory map, and to discard the `price` that came from the inventory query. 

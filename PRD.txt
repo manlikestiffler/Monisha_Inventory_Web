@@ -1,0 +1,187 @@
+# PRD: Inventory and E-commerce App Integration
+
+**Author:** Gemini
+**Version:** 1.0
+**Date:** 2024-07-25
+
+---
+
+## 1. Overview
+
+This document outlines the requirements for integrating the existing Inventory Management web application with the new E-commerce application. The primary goal is to create a seamless, shared backend using Firebase/Firestore, ensuring that product information, stock levels, and orders are synchronized in real-time between both platforms.
+
+The Inventory app will serve as the master source of truth for product and stock data, while the E-commerce app will be the primary sales channel, consuming this data and pushing order information back into the shared system.
+
+This PRD is intended for the development team of the E-commerce app to understand the data architecture and required data flows.
+
+---
+
+## 2. Core Principle: Shared Database
+
+Both applications will read from and write to the same Firestore database. This eliminates the need for a separate sync process and ensures data consistency. The E-commerce app must adhere to the data structures defined in this document.
+
+---
+
+## 3. Key Data Structures (Firestore Collections)
+
+The following collections are central to the integration. The E-commerce app will primarily interact with `uniforms`, `uniform_variants`, `batchInventory`, and `orders`.
+
+### 3.1. `uniforms`
+
+This is the main product catalog. It contains the high-level information for each uniform type.
+
+-   **Collection Name:** `uniforms`
+-   **Document ID:** Auto-generated
+-   **Fields:**
+    -   `name` (string): e.g., "School Blazer"
+    -   `description` (string): Detailed product description.
+    -   `category` (string): e.g., "Outerwear"
+    -   `schoolId` (string, optional): Reference to the `schools` collection if specific to a school.
+    -   `isActive` (boolean): `true` if the product should be visible on the e-commerce site.
+    -   `createdAt` (timestamp): Date of creation.
+    -   `updatedAt` (timestamp): Date of last update.
+    -   `media` (array of objects):
+        -   `url` (string): URL to the product image/video.
+        -   `type` (string): 'image' or 'video'.
+
+### 3.2. `uniform_variants`
+
+This collection stores the specific variations of each uniform, such as by color. It is linked to the `uniforms` collection.
+
+-   **Collection Name:** `uniform_variants`
+-   **Document ID:** Auto-generated
+-   **Fields:**
+    -   `uniformId` (string): **FOREIGN KEY** to the `uniforms` collection.
+    -   `type` (string, optional): e.g., "Boys", "Girls".
+    -   `color` (string): e.g., "Navy Blue".
+    -   `sizes` (array of objects): The specific SKUs available for this variant.
+        -   `size` (string): e.g., "S", "M", "32", "34".
+        -   `price` (number): The price for this specific size.
+        -   `sku` (string): A unique stock-keeping unit for this size, e.g., "BLZR-NAVY-S".
+    -   `createdAt` (timestamp).
+
+### 3.3. `batchInventory`
+
+This collection holds the actual, real-time stock counts. The E-commerce app **must** read from this collection to determine product availability. Stock is managed in batches.
+
+-   **Collection Name:** `batchInventory`
+-   **Document ID:** Auto-generated (represents a batch)
+-   **Fields:**
+    -   `batchName` (string): e.g., "Summer 2024 Production".
+    -   `createdAt` (timestamp).
+    -   `items` (array of objects):
+        -   `uniformId` (string): Reference to the `uniforms` collection.
+        -   `variantId` (string): Reference to the `uniform_variants` collection.
+        -   `sizes` (array of objects):
+            -   `size` (string): e.g., "S", "M".
+            -   `quantity` (number): **The available stock for this size in this batch.**
+            -   `sku` (string): e.g., "BLZR-NAVY-S".
+
+**Note:** To get the total stock for a given SKU, the E-commerce app must sum the `quantity` for that SKU across all documents in the `batchInventory` collection.
+
+### 3.4. `orders`
+
+This collection will store orders from both the Inventory app (for schools) and the new E-commerce app (for customers).
+
+-   **Collection Name:** `orders`
+-   **Document ID:** Auto-generated
+-   **Fields:**
+    -   `orderNumber` (string): A unique, human-readable order number.
+    -   `source` (string): **MUST be set to `'ecommerce'` for sales from the new app.** ('inventory' for the existing app).
+    -   `status` (string): 'pending', 'processing', 'shipped', 'completed', 'cancelled'.
+    -   `customerId` (string, optional): Reference to a future `customers` collection.
+    -   `customerInfo` (object): For guest checkouts.
+        -   `name` (string).
+        -   `email` (string).
+        -   `shippingAddress` (string).
+    -   `items` (array of objects): The products in the order.
+        -   `uniformId` (string).
+        -   `variantId` (string).
+        -   `sku` (string).
+        -   `name` (string): Product name at time of purchase.
+        -   `size` (string).
+        -   `quantity` (number).
+        -   `unitPrice` (number): Price per unit at time of purchase.
+    -   `totalAmount` (number).
+    -   `paymentDetails` (object):
+        -   `paymentId` (string): ID from the payment gateway (e.g., Stripe, PayPal).
+        -   `status` (string): 'paid', 'pending', 'refunded'.
+    -   `createdAt` (timestamp).
+    -   `updatedAt` (timestamp).
+
+---
+
+## 4. Data Flows
+
+This section describes the key processes and how data moves between Firestore and the applications.
+
+### 4.1. Flow 1: Displaying Products on the E-commerce Site
+
+To display a product collection page, the E-commerce app must perform the following steps:
+
+```mermaid
+sequenceDiagram
+    participant EcomApp as E-commerce App (Client)
+    participant Firestore as Firestore DB
+
+    EcomApp->>Firestore: 1. Query `uniforms` where `isActive` == true
+    Firestore-->>EcomApp: Returns list of active Uniforms
+
+    EcomApp->>Firestore: 2. For each Uniform, query `uniform_variants` where `uniformId` matches
+    Firestore-->>EcomApp: Returns list of Variants for each Uniform
+
+    EcomApp->>Firestore: 3. For each SKU, query `batchInventory` and SUM `quantity`
+    Firestore-->>EcomApp: Returns total stock for each SKU
+
+    EcomApp->>EcomApp: 4. Combine Uniform, Variant, and Stock data
+    EcomApp->>EcomApp: 5. Render Products Page with available sizes
+```
+
+### 4.2. Flow 2: Placing an Order and Decrementing Stock
+
+When a customer places an order on the E-commerce app, inventory must be atomically updated. This **must** be done inside a Firestore Transaction to prevent race conditions (e.g., selling the same item twice).
+
+```mermaid
+sequenceDiagram
+    participant EcomApp as E-commerce App (Server-side/Function)
+    participant Firestore as Firestore DB
+
+    EcomApp->>Firestore: 1. Start Firestore Transaction
+
+    EcomApp->>Firestore: 2. For each item in cart, read stock from `batchInventory`
+    Firestore-->>EcomApp: Current stock levels
+
+    EcomApp->>EcomApp: 3. Verify enough stock is available for the entire order
+    alt Order Fails (Not enough stock)
+        EcomApp->>Firestore: Abort Transaction
+        EcomApp->>Client: Notify "Item out of stock"
+    end
+
+    EcomApp->>Firestore: 4. Decrement `quantity` for each item in `batchInventory` (within Transaction)
+    EcomApp->>Firestore: 5. Create a new document in `orders` with `source: 'ecommerce'` (within Transaction)
+
+    Firestore->>Firestore: 6. Commit Transaction Atomically
+    alt Transaction Fails
+         EcomApp->>Client: Notify "Order failed, please try again"
+    end
+    Firestore-->>EcomApp: Transaction Success
+
+    EcomApp->>Client: 7. Confirm order to customer
+```
+**Critical Note:** The logic for decrementing stock should intelligently decide which batch to pull from if an item exists in multiple batches (e.g., First-In, First-Out). A simple approach is to decrement from the oldest batch that has sufficient quantity.
+
+---
+
+## 5. Non-Functional Requirements
+
+-   **Security:** Firestore Security Rules must be configured to allow the E-commerce app appropriate read/write access. For example, customers should only be able to create orders and not modify inventory directly. All stock-modifying logic should be handled by a trusted server-side environment (e.g., Firebase Functions).
+-   **Performance:** The E-commerce app should implement caching strategies to avoid re-fetching product data on every page load. The data structure is designed for efficient queries.
+-   **Scalability:** Firestore is highly scalable. The data models are designed to support a large number of products and orders.
+
+---
+
+## 6. Future Considerations
+
+-   **Customers Collection:** A `customers` collection should be created to store user accounts from the E-commerce app, linking them to the `orders` collection via a `customerId`.
+-   **Firebase Functions:** The order processing logic (including stock decrement) is a prime candidate for a Firebase Function to ensure it runs in a secure and reliable environment.
+-   **Search:** For a better user experience, a search service like Algolia or Typesense should be implemented, indexed with data from the `uniforms` and `uniform_variants` collections. 

@@ -1,0 +1,146 @@
+Here is a detailed prompt for the **functionality** of the **Monisha Inventory Management System**:
+
+---
+
+### **Objective:**
+Create a fully functional **Monisha Inventory Management System** with the necessary features for efficient uniform manufacturing, stock tracking, school management, transactions, and material management. The system should be designed to allow employees to perform operations related to uniforms, schools, inventory, batches, and transactions seamlessly.
+
+---
+
+### **Core Functionalities:**
+
+#### **1. Authentication and Role Management:**
+- **Login and User Authentication:**
+  - Users should be able to log in with a username and password.
+  - Basic authentication with role-based access (Admin, Manager, Employee).
+  - **Admin:** Full access to all functionalities (e.g., user management, reports, inventory, transactions).
+  - **Manager:** Ability to view inventory, manage batches, transactions, and school data.
+  - **Employee:** Limited access to manage uniforms, materials, and process transactions.
+
+- **User Registration and Profile Management:**
+  - Admin can create new users with specified roles.
+  - Profile management for updating contact details, password reset, and profile picture.
+
+#### **2. Dashboard:**
+- **Real-time Data Overview:**
+  - Display important metrics such as Total Revenue, Total Stock, Low-Stock Alerts, Pending Orders, and Batch Status.
+  - **Interactive Charts** displaying sales data, inventory levels, and transaction history.
+  - Notifications for low stock or pending transactions.
+  - Quick actions to navigate to core sections like Add Uniform, View Transactions, Add School, etc.
+
+#### **3. Uniform Inventory Management:**
+- **Add/Edit/Delete Uniform Types:**
+  - Employees can add new uniform types (e.g., Blazers, Shirts, Trousers) with basic information (type, category).
+  - Each uniform type has variants (size, color, material), which can be edited or deleted.
+  
+- **Track Uniform Variants:**
+  - Variants are based on attributes like size (e.g., Small, Medium, Large), color (e.g., Red, Blue), and material (e.g., Cotton, Polyester).
+  - Assign each variant a unique identifier (e.g., SKU) for tracking.
+  
+- **Inventory Management:**
+  - Employees can track the stock levels of each variant and receive notifications if stock falls below a certain threshold.
+  - Ability to **update stock levels** when uniforms are produced or sold.
+  
+- **Advanced Search and Filters:**
+  - Filters by type, category, size, color, and material.
+  - Search bar to quickly find uniforms by name, SKU, or other attributes.
+
+#### **4. Material Management:**
+- **Predefined and Custom Materials:**
+  - Predefined materials like Cotton, Polyester, and Silk, along with their properties (cost, weight, durability, etc.).
+  - Employees can add **custom materials** with details (name, cost, fabric type, weight).
+  
+- **Material Assignment to Uniforms:**
+  - Link materials to specific uniform variants (e.g., Red Blazer made of Cotton).
+  
+- **Material Usage Tracking:**
+  - Track the quantity of material used for each batch, ensuring inventory levels are accurate.
+
+#### **5. School Management:**
+- **Add/Edit/Delete Schools:**
+  - Admin and managers can add, edit, or delete schools from the system.
+  - Fields for school name, address, contact information, and notes.
+  
+- **School-Specific Transactions:**
+  - Associate transactions with schools to track their order history.
+  - View school-specific orders and stock levels.
+
+#### **6. Batch Management:**
+- **Create and Track Batches:**
+  - Create production batches for uniform manufacturing, with details such as batch number, date of creation, and quantity.
+  - Assign specific uniforms to a batch (e.g., Batch #001 includes 100 Red Blazers).
+  
+- **Batch Status:**
+  - Track the status of batches (In Progress, Completed, Distributed).
+  
+- **Assign Batches to Schools or Inventory:**
+  - After batch completion, assign uniforms to schools or store them in the inventory.
+  
+- **Batch Cost and Supplier Management:**
+  - Track production costs (materials, labor) and supplier details for each batch.
+
+#### **7. Transaction Management:**
+- **Record Transactions:**
+  - Create new transactions for school orders. Each transaction should include uniform details (type, size, quantity), price, and payment status (paid, pending).
+  
+- **Transaction History:**
+  - Admin and managers can view and search through transaction records, filter by school, date, or order status.
+  
+- **Generate Transaction Invoices:**
+  - Automatically generate invoices for completed transactions.
+  - Invoices should include uniform details, quantity, price per unit, total amount, and tax.
+
+- **Payment Status Tracking:**
+  - Track payment status (paid, pending) and send reminders or notifications for unpaid orders.
+
+#### **8. Reports and Analytics:**
+- **Sales and Inventory Reports:**
+  - Generate reports based on sales, inventory usage, and low-stock alerts.
+  - **Sales trends** over a period of time, visualized through charts or graphs.
+  
+- **Batch Utilization and Production Efficiency:**
+  - Track batch costs, quantity produced, and compare against actual sales to determine efficiency.
+  
+- **School Order History:**
+  - Generate detailed reports of past orders from each school, including uniform types, quantities, and payment status.
+  
+- **Export Reports:**
+  - Export data as PDF or Excel files for further analysis.
+
+#### **9. Notifications and Alerts:**
+- **Low Stock Alerts:**
+  - Alert employees when stock levels fall below a threshold for a specific uniform variant.
+  
+- **Transaction Payment Alerts:**
+  - Notify employees when a school’s payment is overdue or when a transaction is completed.
+  
+- **Batch Production Alerts:**
+  - Notify managers when a batch is completed or when a new batch is assigned to a school.
+
+#### **10. Settings and Configurations:**
+- **Company Settings:**
+  - Configure basic company details (e.g., name, address, logo).
+  
+- **Tax and Currency Settings:**
+  - Set tax rates for transactions and define the currency for the system.
+  
+- **Customize Categories and Types:**
+  - Admin can create custom categories for uniforms (e.g., Formal, Casual) or materials (e.g., Cotton, Synthetic).
+
+#### **11. Search Functionality:**
+- **Universal Search Bar:**
+  - Search across different sections (Uniforms, Schools, Transactions, Batches) to quickly find data.
+  
+- **Advanced Filters and Sorting:**
+  - Enable employees to filter uniforms by type, category, size, and color.
+  - Sort transactions by date, amount, or school.
+
+---
+
+### **Additional Functionalities:**
+- **Multi-Language Support:** Option for the app to support multiple languages (English, local languages, etc.).
+- **Export Data:** Ability to export key data like transactions, inventory, and batches in CSV or Excel format.
+
+---
+
+This detailed functionality setup ensures that the Monisha Inventory Management System will be a powerful tool for the company, streamlining its uniform production and distribution process while providing an intuitive, efficient experience for employees.
