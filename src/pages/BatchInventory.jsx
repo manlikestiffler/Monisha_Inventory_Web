@@ -37,6 +37,8 @@ const itemVariants = {
   },
 };
 
+import EditBatchModal from '../components/batches/EditBatchModal';
+
 const BatchInventory = () => {
   const navigate = useNavigate();
   const [batches, setBatches] = useState([]);
@@ -52,27 +54,30 @@ const BatchInventory = () => {
   const [analytics, setAnalytics] = useState({ totalBatches: 0, totalValue: 0, totalItems: 0 });
   const [creatorNames, setCreatorNames] = useState({});
 
+  // State for Edit Modal
+  const [editingBatch, setEditingBatch] = useState(null);
+
   const formatCreatorName = (createdBy) => {
     if (!createdBy) return 'N/A';
-    
+
     // If it's already a proper name (doesn't contain @), return as is
     if (!createdBy.includes('@')) {
       return createdBy;
     }
-    
+
     // If it's an email, format it to a readable name
     const name = createdBy.split('@')[0];
     return name.replace(/[._]/g, ' ')
-               .replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+      .replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
   };
 
   useEffect(() => {
     setLoading(true);
     const q = query(collection(db, 'batchInventory'), orderBy('createdAt', 'desc'));
-    
+
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       const batchesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       // Don't set batches immediately - wait for creator names to be fetched first
       const creatorEmails = [...new Set(batchesData.map(b => b.createdBy).filter(Boolean))];
 
@@ -94,10 +99,10 @@ const BatchInventory = () => {
               const querySnapshot = await getDocs(userQuery);
               querySnapshot.forEach(doc => {
                 const profile = doc.data();
-                const fullName = profile.fullName || 
-                               `${profile.firstName || ''} ${profile.lastName || ''}`.trim() ||
-                               profile.displayName ||
-                               profile.name;
+                const fullName = profile.fullName ||
+                  `${profile.firstName || ''} ${profile.lastName || ''}`.trim() ||
+                  profile.displayName ||
+                  profile.name;
                 if (profile.email && fullName) {
                   fetchedNames[profile.email] = fullName;
                 }
@@ -108,10 +113,10 @@ const BatchInventory = () => {
 
           const staffNames = await fetchNames(emailsToFetch, 'inventory_staff');
           const managerNames = await fetchNames(emailsToFetch, 'inventory_managers');
-          
+
           const updatedCreatorNames = { ...namesMap, ...staffNames, ...managerNames };
           setCreatorNames(updatedCreatorNames);
-          
+
           // Now set batches after creator names are ready
           setBatches(batchesData);
           setLocalBatches(batchesData);
@@ -125,7 +130,7 @@ const BatchInventory = () => {
         setBatches(batchesData);
         setLocalBatches(batchesData);
       }
-      
+
       setLoading(false);
     }, (error) => {
       console.error("Error fetching batches:", error);
@@ -162,14 +167,14 @@ const BatchInventory = () => {
 
   const handleConfirmDelete = async () => {
     if (!batchToDelete) return;
-    
+
     try {
       setIsDeleting(true);
       const { user, userProfile } = useAuthStore.getState();
-      const fullName = userProfile?.firstName && userProfile?.lastName 
+      const fullName = userProfile?.firstName && userProfile?.lastName
         ? `${userProfile.firstName} ${userProfile.lastName}`.trim()
         : userProfile?.displayName || user?.displayName || 'Unknown User';
-      
+
       const userInfo = {
         id: user?.uid,
         name: fullName,
@@ -211,7 +216,7 @@ const BatchInventory = () => {
         >
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Error Loading Batches</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
-          <Button 
+          <Button
             onClick={() => window.location.reload()}
             className="bg-red-500 hover:bg-red-600 text-white"
           >
@@ -257,27 +262,27 @@ const BatchInventory = () => {
           <div className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Total Batches</div>
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{filteredBatches.length}</div>
         </motion.div>
-        
+
         <motion.div
           variants={itemVariants}
           className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-black dark:to-black p-6 rounded-2xl border border-purple-100 dark:border-gray-700"
         >
           <div className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Total Items</div>
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {filteredBatches.reduce((sum, batch) => 
-              sum + (batch?.items?.reduce((itemSum, item) => 
+            {filteredBatches.reduce((sum, batch) =>
+              sum + (batch?.items?.reduce((itemSum, item) =>
                 itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + (size?.quantity || 0), 0) || 0), 0) || 0), 0
             )} pcs
           </div>
         </motion.div>
-        
+
         <motion.div
           variants={itemVariants}
           className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-black dark:to-black p-6 rounded-2xl border border-emerald-100 dark:border-gray-700"
         >
           <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">Total Value</div>
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            ${filteredBatches.reduce((sum, batch) => sum + (batch?.items?.reduce((itemSum, item) => 
+            ${filteredBatches.reduce((sum, batch) => sum + (batch?.items?.reduce((itemSum, item) =>
               itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + ((size?.quantity || 0) * (item?.price || 0)), 0) || 0), 0) || 0), 0).toLocaleString()}
           </div>
         </motion.div>
@@ -306,7 +311,7 @@ const BatchInventory = () => {
             <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Are you sure?</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              You are about to delete the batch <span className="font-semibold text-gray-800 dark:text-gray-200">{batchToDelete?.name}</span>. 
+              You are about to delete the batch <span className="font-semibold text-gray-800 dark:text-gray-200">{batchToDelete?.name}</span>.
               This action is irreversible.
             </p>
           </div>
@@ -320,6 +325,13 @@ const BatchInventory = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Edit Batch Modal */}
+      <EditBatchModal
+        isOpen={!!editingBatch}
+        onClose={() => setEditingBatch(null)}
+        batch={editingBatch}
+      />
 
       {/* Batch List */}
       <div className="mt-6">
@@ -393,21 +405,36 @@ const BatchInventory = () => {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <button 
-                              onClick={() => navigate(`/batches/${batch.id}`)} 
+                            <button
+                              onClick={() => navigate(`/batches/${batch.id}`)}
                               className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all duration-200 border border-blue-200"
                               title="View Batch"
                             >
                               <FileText className="w-4 h-4" />
                             </button>
                             {isManager() && (
-                              <button 
-                                onClick={() => handleDeleteClick(batch)} 
-                                className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all duration-200 border border-red-200"
-                                title="Delete Batch"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingBatch(batch);
+                                  }}
+                                  className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 transition-all duration-200 border border-amber-200"
+                                  title="Edit Batch"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteClick(batch);
+                                  }}
+                                  className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all duration-200 border border-red-200"
+                                  title="Delete Batch"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
