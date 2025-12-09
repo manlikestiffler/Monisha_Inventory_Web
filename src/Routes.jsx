@@ -29,6 +29,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import UpdateStudentUniformsPage from './pages/UpdateStudentUniformsPage';
 import LogUniform from './pages/LogUniform';
 import DeficitReportPage from './pages/DeficitReportPage';
+import ProductFlow from './pages/ProductFlow';
 
 function Routes() {
   const { setUser } = useAuthStore();
@@ -63,7 +64,7 @@ function Routes() {
         <Route path="inventory" element={<Outlet />}>
           <Route index element={<Inventory />} />
           <Route path="add" element={<AddProductNew />} />
-         
+
           <Route path="edit/:id" element={<AddProductNew />} />
           <Route path=":id" element={<ProductDetails />} />
         </Route>
@@ -78,6 +79,8 @@ function Routes() {
         <Route path="batches/create" element={<CreateBatch />} />
         <Route path="batches/:id" element={<BatchDetails />} />
         <Route path="batches/edit/:id" element={<EditBatch />} />
+        <Route path="product-flow" element={<ProductFlow />} />
+        <Route path="product-flow/:batchId" element={<ProductFlow />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />

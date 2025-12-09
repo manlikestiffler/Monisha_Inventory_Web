@@ -9,12 +9,13 @@ import { useBatchStore } from '../stores/batchStore';
 import { useSchoolStore } from '../stores/schoolStore';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Search, Plus, Filter, FileText, Edit2, Trash2, TrendingUp, Package, DollarSign, BarChart2, X, AlertTriangle, Download, FileSpreadsheet } from 'lucide-react';
+import { Search, Plus, Filter, FileText, Edit2, Trash2, TrendingUp, Package, DollarSign, BarChart2, X, AlertTriangle, Download, FileSpreadsheet, GitBranch } from 'lucide-react';
 import { collection, getDocs, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import LoadingScreen from '../components/ui/LoadingScreen';
 import Modal from '../components/ui/Modal';
 import { exportToExcel, exportToPDF, exportToDocx } from '../utils/exportHelper';
+import { getAggregatedAllocationData, getBatchAllocationSummary } from '../utils/allocationTracker';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -52,7 +53,16 @@ const BatchInventory = () => {
   const [batchToDelete, setBatchToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [localBatches, setLocalBatches] = useState([]);
-  const [analytics, setAnalytics] = useState({ totalBatches: 0, totalValue: 0, totalItems: 0 });
+  const [analytics, setAnalytics] = useState({
+    totalBatches: 0,
+    totalValue: 0,
+    totalItems: 0,
+    allocatedItems: 0,
+    unallocatedItems: 0,
+    allocatedValue: 0,
+    unallocatedValue: 0,
+    allocationRate: 0
+  });
   const [creatorNames, setCreatorNames] = useState({});
 
   // State for Edit Modal
@@ -163,13 +173,22 @@ const BatchInventory = () => {
     const matchesYear = selectedYear === 'All' || batchDate.getFullYear().toString() === selectedYear;
 
     const totalQuantity = batch.items?.reduce((sum, item) => sum + item.sizes?.reduce((sizeSum, size) => sizeSum + (size.quantity || 0), 0), 0) || 0;
+    const totalAllocated = batch.items?.reduce((sum, item) => sum + item.sizes?.reduce((sizeSum, size) => sizeSum + (size.allocated || 0), 0), 0) || 0;
     const isDepleted = totalQuantity === 0;
+    const hasAllocations = totalAllocated > 0;
+    const isFullyAllocated = totalQuantity === 0 && totalAllocated > 0;
 
     let matchesStatus = true;
     if (selectedStatus === 'Depleted') {
       matchesStatus = isDepleted;
     } else if (selectedStatus === 'Available') {
       matchesStatus = !isDepleted;
+    } else if (selectedStatus === 'Allocated') {
+      matchesStatus = hasAllocations;
+    } else if (selectedStatus === 'Unallocated') {
+      matchesStatus = !hasAllocations && totalQuantity > 0;
+    } else if (selectedStatus === 'Partially Allocated') {
+      matchesStatus = hasAllocations && totalQuantity > 0;
     }
 
     return matchesSearch && matchesYear && matchesStatus;
@@ -298,15 +317,24 @@ const BatchInventory = () => {
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your uniform batches</p>
         </div>
-        {isManager() && (
+        <div className="flex gap-3">
           <Button
-            onClick={() => navigate('/batches/create')}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+            onClick={() => navigate('/product-flow')}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-3 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
           >
-            <Plus className="w-5 h-5" />
-            Create New Batch
+            <GitBranch className="w-5 h-5" />
+            Product Flow
           </Button>
-        )}
+          {isManager() && (
+            <Button
+              onClick={() => navigate('/batches/create')}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create New Batch
+            </Button>
+          )}
+        </div>
       </div>
       <div className="flex gap-4">
         <div className="relative">
@@ -343,57 +371,67 @@ const BatchInventory = () => {
             </div>
           </div>
         </div>
-
-        {isManager() && (
-          <Button
-            onClick={() => navigate('/batches/create')}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create New Batch
-          </Button>
-        )}
       </div>
 
       {/* Analytics Cards */}
-      <motion.div
-        className="grid grid-cols-3 gap-6 dark:bg-black"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.div
-          variants={itemVariants}
-          className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-black dark:to-black p-6 rounded-2xl border border-blue-100 dark:border-gray-700"
-        >
-          <div className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Total Batches</div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{filteredBatches.length}</div>
-        </motion.div>
+      {(() => {
+        const allocationData = getAggregatedAllocationData(filteredBatches);
+        return (
+          <motion.div
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4 dark:bg-black"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.div
+              variants={itemVariants}
+              className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-black dark:to-black p-6 rounded-2xl border border-blue-100 dark:border-gray-700"
+            >
+              <div className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Total Batches</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{filteredBatches.length}</div>
+            </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-black dark:to-black p-6 rounded-2xl border border-purple-100 dark:border-gray-700"
-        >
-          <div className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Total Items</div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {filteredBatches.reduce((sum, batch) =>
-              sum + (batch?.items?.reduce((itemSum, item) =>
-                itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + (size.initialQuantity !== undefined ? size.initialQuantity : (size.quantity || 0)), 0) || 0), 0) || 0), 0
-            )} pcs
-          </div>
-        </motion.div>
+            <motion.div
+              variants={itemVariants}
+              className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-black dark:to-black p-6 rounded-2xl border border-purple-100 dark:border-gray-700"
+            >
+              <div className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Allocation Rate</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                {allocationData.allocationRate}%
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {allocationData.totalAllocated.toLocaleString()} of {allocationData.totalOriginal.toLocaleString()} items
+              </div>
+            </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-black dark:to-black p-6 rounded-2xl border border-emerald-100 dark:border-gray-700"
-        >
-          <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">Total Value</div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            ${filteredBatches.reduce((sum, batch) => sum + (batch?.items?.reduce((itemSum, item) =>
-              itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + ((size.initialQuantity !== undefined ? size.initialQuantity : (size.quantity || 0)) * (item?.price || 0)), 0) || 0), 0) || 0), 0).toLocaleString()}
-          </div>
-        </motion.div>
-      </motion.div>
+            <motion.div
+              variants={itemVariants}
+              className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-black dark:to-black p-6 rounded-2xl border border-emerald-100 dark:border-gray-700"
+            >
+              <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">Allocated Value</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                ${allocationData.allocatedValue.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {allocationData.totalAllocated.toLocaleString()} items to products
+              </div>
+            </motion.div>
+
+            <motion.div
+              variants={itemVariants}
+              className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-black dark:to-black p-6 rounded-2xl border border-amber-100 dark:border-gray-700"
+            >
+              <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">Unallocated (Warehouse)</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                ${allocationData.unallocatedValue.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {allocationData.totalUnallocated.toLocaleString()} items available
+              </div>
+            </motion.div>
+          </motion.div>
+        );
+      })()}
 
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4">
@@ -422,11 +460,14 @@ const BatchInventory = () => {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm min-w-[140px]"
+            className="px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm min-w-[180px]"
           >
             <option value="All">All Status</option>
-            <option value="Available">Available</option>
-            <option value="Depleted">Depleted</option>
+            <option value="Available">Available (Has Stock)</option>
+            <option value="Depleted">Depleted (No Stock)</option>
+            <option value="Allocated">Allocated (Used)</option>
+            <option value="Unallocated">Unallocated (Unused)</option>
+            <option value="Partially Allocated">Partially Allocated</option>
           </select>
         </div>
       </div>

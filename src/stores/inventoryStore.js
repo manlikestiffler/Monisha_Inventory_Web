@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, onSnapshot, serverTimestamp, getDoc, updateDoc, where, arrayUnion } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import useNotificationStore from './notificationStore';
+import { recordBatchAllocation } from '../utils/allocationTracker';
 
 export const useInventoryStore = create((set, get) => ({
   products: [],
@@ -14,17 +15,17 @@ export const useInventoryStore = create((set, get) => ({
   // Setup real-time listeners for products
   setupRealtimeListeners: () => {
     const { unsubscribers } = get();
-    
+
     // Clean up existing listeners
     unsubscribers.forEach(unsubscribe => unsubscribe());
-    
+
     set({ loading: true, error: null });
-    
+
     const newUnsubscribers = [];
     let uniformsData = [];
     let materialsData = [];
     let variantsData = [];
-    
+
     // Listen to uniforms collection
     const uniformsQuery = query(collection(db, 'uniforms'), orderBy('createdAt', 'desc'));
     const uniformsUnsubscribe = onSnapshot(uniformsQuery, (snapshot) => {
@@ -38,7 +39,7 @@ export const useInventoryStore = create((set, get) => ({
       set({ error: 'Failed to sync uniforms', loading: false });
     });
     newUnsubscribers.push(uniformsUnsubscribe);
-    
+
     // Listen to uniform_variants collection
     const variantsQuery = query(collection(db, 'uniform_variants'));
     const variantsUnsubscribe = onSnapshot(variantsQuery, (snapshot) => {
@@ -52,7 +53,7 @@ export const useInventoryStore = create((set, get) => ({
       set({ error: 'Failed to sync variants', loading: false });
     });
     newUnsubscribers.push(variantsUnsubscribe);
-    
+
     // Listen to raw_materials collection
     const materialsQuery = query(collection(db, 'raw_materials'), orderBy('createdAt', 'desc'));
     const materialsUnsubscribe = onSnapshot(materialsQuery, (snapshot) => {
@@ -67,7 +68,7 @@ export const useInventoryStore = create((set, get) => ({
       set({ error: 'Failed to sync materials', loading: false });
     });
     newUnsubscribers.push(materialsUnsubscribe);
-    
+
     // Function to update state when any collection changes
     const updateProductsState = () => {
       // Combine uniforms with their variants, ensuring `variantType` is consistently available
@@ -88,13 +89,13 @@ export const useInventoryStore = create((set, get) => ({
       // Filter uniforms (exclude raw materials)
       const allUniforms = uniformsWithVariants.filter(item => item.productType === 'uniform');
       const allVariants = variantsData;
-      
+
       // Combine and sort all products by createdAt (newest first)
       const allProducts = [...uniformsWithVariants, ...materialsData]
         .sort((a, b) => {
           // Handle different timestamp formats more robustly
           let aTime, bTime;
-          
+
           // For Firebase Timestamp objects
           if (a.createdAt?.toDate) {
             aTime = a.createdAt.toDate();
@@ -105,7 +106,7 @@ export const useInventoryStore = create((set, get) => ({
           } else {
             aTime = new Date(0); // Fallback for very old products
           }
-          
+
           if (b.createdAt?.toDate) {
             bTime = b.createdAt.toDate();
           } else if (b.createdAt instanceof Date) {
@@ -115,18 +116,18 @@ export const useInventoryStore = create((set, get) => ({
           } else {
             bTime = new Date(0); // Fallback for very old products
           }
-          
+
           return bTime - aTime; // Descending order (newest first)
         });
-      
-      set({ 
-        products: allProducts, 
+
+      set({
+        products: allProducts,
         uniforms: allUniforms,
         uniformVariants: allVariants,
         loading: false,
         error: null
       });
-      
+
       console.log('🌐 Real-time update: Products synced', {
         uniforms: uniformsWithVariants.length,
         materials: materialsData.length,
@@ -141,17 +142,17 @@ export const useInventoryStore = create((set, get) => ({
         }))
       });
     };
-    
+
     set({ unsubscribers: newUnsubscribers });
   },
-  
+
   // Cleanup listeners
   cleanup: () => {
     const { unsubscribers } = get();
     unsubscribers.forEach(unsubscribe => unsubscribe());
     set({ unsubscribers: [] });
   },
-  
+
   // Legacy method for compatibility
   fetchProducts: async () => {
     // For initial load or fallback, use the real-time listeners
@@ -161,31 +162,31 @@ export const useInventoryStore = create((set, get) => ({
   // Get products filtered by gender and level for uniform policies
   getProductsByGenderAndLevel: (gender, level) => {
     const { products } = get();
-    
+
     return products.filter(product => {
       // Only filter uniforms, not raw materials
       if (product.productType !== 'uniform') return false;
-      
+
       // Check if product matches the gender criteria
       const productGender = product.gender?.toLowerCase() || product.sex?.toLowerCase();
       const targetGender = gender?.toLowerCase();
-      
+
       // Gender matching logic
-      const genderMatch = 
-        targetGender === 'unisex' || 
+      const genderMatch =
+        targetGender === 'unisex' ||
         productGender === 'unisex' ||
         productGender === targetGender;
-      
+
       // Check if product matches the level criteria
       const productLevel = product.level?.toLowerCase();
       const targetLevel = level?.toLowerCase();
-      
+
       // Level matching logic
-      const levelMatch = 
+      const levelMatch =
         !targetLevel || // No level specified means all levels
         !productLevel || // Product has no level means it fits all levels
         productLevel === targetLevel;
-      
+
       return genderMatch && levelMatch;
     });
   },
@@ -193,29 +194,29 @@ export const useInventoryStore = create((set, get) => ({
   // Get available uniforms for policy creation with detailed filtering
   getAvailableUniformsForPolicy: (gender, level) => {
     const { uniforms, uniformVariants } = get();
-    
+
     const filteredUniforms = uniforms.filter(uniform => {
       // Check gender match
       const uniformGender = uniform.gender?.toLowerCase() || uniform.sex?.toLowerCase();
       const targetGender = gender?.toLowerCase();
-      
-      const genderMatch = 
-        targetGender === 'unisex' || 
+
+      const genderMatch =
+        targetGender === 'unisex' ||
         uniformGender === 'unisex' ||
         uniformGender === targetGender;
-      
+
       // Check level match
       const uniformLevel = uniform.level?.toLowerCase();
       const targetLevel = level?.toLowerCase();
-      
-      const levelMatch = 
-        !targetLevel || 
-        !uniformLevel || 
+
+      const levelMatch =
+        !targetLevel ||
+        !uniformLevel ||
         uniformLevel === targetLevel;
-      
+
       return genderMatch && levelMatch;
     });
-    
+
     // Attach variants to each uniform
     return filteredUniforms.map(uniform => {
       const variants = uniformVariants.filter(variant => variant.uniformId === uniform.id);
@@ -226,10 +227,10 @@ export const useInventoryStore = create((set, get) => ({
   addProduct: async (productData, type, userInfo) => {
     try {
       set({ loading: true, error: null });
-      
+
       // CRITICAL FIX: Deduct quantities from batch inventory for all variants and sizes
       if (type === 'uniform' && productData.variants && productData.variants.length > 0) {
-        
+
         // Process each variant and its sizes for batch deduction
         for (const variant of productData.variants) {
           if (variant.sizes && variant.sizes.length > 0) {
@@ -274,7 +275,31 @@ export const useInventoryStore = create((set, get) => ({
         );
 
         await Promise.all(variantPromises);
-        
+
+        // ALLOCATION TRACKING: Record allocations in batch inventory
+        for (const variant of productData.variants) {
+          if (variant.sizes && variant.sizes.length > 0) {
+            for (const sizeData of variant.sizes) {
+              if (sizeData.batchAllocations && sizeData.batchAllocations.length > 0) {
+                for (const batchAllocation of sizeData.batchAllocations) {
+                  await recordBatchAllocation(batchAllocation.batchId, {
+                    productId: uniformRef.id,
+                    productName: productData.name || productData.productName,
+                    schoolId: productData.school || productData.schoolId,
+                    schoolName: productData.schoolName || 'Unknown School',
+                    variantType: batchAllocation.variantType || variant.variant,
+                    color: batchAllocation.color || variant.color,
+                    size: sizeData.size,
+                    quantity: sizeData.quantity,
+                    allocatedBy: userInfo?.uid || userInfo?.id || 'unknown',
+                    allocatedByName: userInfo?.name || userInfo?.displayName || 'Unknown User'
+                  });
+                }
+              }
+            }
+          }
+        }
+
         // Create notification for product creation
         const { addNotification } = useNotificationStore.getState();
         await addNotification({
@@ -285,7 +310,7 @@ export const useInventoryStore = create((set, get) => ({
           priority: 'medium',
           icon: type === 'uniform' ? '👕' : '📦'
         }, userInfo);
-        
+
         console.log('✅ Product created and batch inventory updated successfully');
       } else {
         // Add raw material
@@ -321,15 +346,15 @@ export const useInventoryStore = create((set, get) => ({
     const batchRef = doc(db, 'batchInventory', batchId);
     try {
       const batchDoc = await getDoc(batchRef);
-      
+
       if (batchDoc.exists()) {
         const batchData = batchDoc.data();
-        
+
         if (!batchData.items || !Array.isArray(batchData.items)) {
           console.warn(`Batch ${batchId} has no items array, skipping deduction`);
           return;
         }
-        
+
         const updatedItems = batchData.items.map(item => {
           if (item.variantType === variantType && item.color === color) {
             const updatedSizes = item.sizes.map(s => {
@@ -362,12 +387,12 @@ export const useInventoryStore = create((set, get) => ({
   deleteProduct: async (productId, isRawMaterial, userInfo) => {
     try {
       set({ loading: true, error: null });
-      
+
       // Get product name before deletion for notification
       const { products } = get();
       const product = products.find(p => p.id === productId);
       const productName = product?.name || product?.productName || 'Unknown Product';
-      
+
       if (!isRawMaterial) {
         // Delete from uniforms collection
         await deleteDoc(doc(db, 'uniforms', productId));
@@ -403,7 +428,7 @@ export const useInventoryStore = create((set, get) => ({
     try {
       const variantsQuery = query(collection(db, 'uniform_variants'));
       const variantsSnapshot = await getDocs(variantsQuery);
-      
+
       for (const doc of variantsSnapshot.docs) {
         const variant = doc.data();
         if (variant.uniformId === uniformId) {
@@ -418,7 +443,7 @@ export const useInventoryStore = create((set, get) => ({
           }
         }
       }
-      
+
       return { available: false, currentStock: 0, variantId: null, variant: null };
     } catch (error) {
       console.error('Error checking product stock:', error);
@@ -431,21 +456,21 @@ export const useInventoryStore = create((set, get) => ({
     try {
       const variantRef = doc(db, 'uniform_variants', variantId);
       const variantDoc = await getDoc(variantRef);
-      
+
       if (!variantDoc.exists()) {
         throw new Error('Variant not found');
       }
-      
+
       const variantData = variantDoc.data();
       const updatedSizes = variantData.sizes.map(s => {
         if (s.size === size) {
           const newQuantity = (s.quantity || 0) - quantity;
           const newAllocated = (s.allocated || 0) + quantity;
-          
+
           if (newQuantity < 0) {
             throw new Error(`Insufficient stock. Available: ${s.quantity}, Requested: ${quantity}`);
           }
-          
+
           return {
             ...s,
             quantity: newQuantity,
@@ -454,7 +479,7 @@ export const useInventoryStore = create((set, get) => ({
         }
         return s;
       });
-      
+
       // Add allocation history
       const allocationEntry = {
         studentId,
@@ -463,13 +488,13 @@ export const useInventoryStore = create((set, get) => ({
         allocatedBy: userId || 'unknown',
         allocatedAt: new Date().toISOString()
       };
-      
+
       await updateDoc(variantRef, {
         sizes: updatedSizes,
         allocationHistory: arrayUnion(allocationEntry),
         updatedAt: new Date()
       });
-      
+
       console.log('✅ Product inventory deducted:', { size, quantity, newStock: updatedSizes.find(s => s.size === size)?.quantity });
       return true;
     } catch (error) {
@@ -482,20 +507,20 @@ export const useInventoryStore = create((set, get) => ({
   reorderFromBatch: async (variantId, batchId, size, quantityToAdd, userId, userName) => {
     try {
       console.log('🔄 Starting reorderFromBatch:', { variantId, batchId, size, quantityToAdd, userId, userName });
-      
+
       // 1. Check batch has sufficient stock
       const batchRef = doc(db, 'batchInventory', batchId);
       const batchDoc = await getDoc(batchRef);
-      
+
       if (!batchDoc.exists()) {
         console.error('❌ Batch document not found:', batchId);
         throw new Error(`Batch not found: ${batchId}`);
       }
-      
+
       const batchData = batchDoc.data();
       const variantDoc = await getDoc(doc(db, 'uniform_variants', variantId));
       const variantData = variantDoc.data();
-      
+
       // Find matching batch item - handle different field names
       let batchItemFound = false;
       const updatedBatchItems = batchData.items.map(item => {
@@ -503,7 +528,7 @@ export const useInventoryStore = create((set, get) => ({
         const itemColor = item.color;
         const variantType = variantData.variantType || variantData.name;
         const variantColor = variantData.color;
-        
+
         if (itemVariantType === variantType && itemColor === variantColor) {
           const updatedSizes = item.sizes.map(s => {
             if (s.size === size) {
@@ -519,15 +544,15 @@ export const useInventoryStore = create((set, get) => ({
         }
         return item;
       });
-      
+
       if (!batchItemFound) {
         console.error('❌ Size not found in batch inventory:', { size, variantType, variantColor });
         throw new Error(`Size ${size} not found in batch inventory for ${variantType} - ${variantColor}`);
       }
-      
+
       // 2. Deduct from batch
       await updateDoc(batchRef, { items: updatedBatchItems });
-      
+
       // 3. Add to product inventory
       console.log('📦 Current variant sizes before update:', variantData.sizes);
       const updatedVariantSizes = variantData.sizes.map(s => {
@@ -538,9 +563,9 @@ export const useInventoryStore = create((set, get) => ({
         }
         return s;
       });
-      
+
       console.log('📦 Updated variant sizes:', updatedVariantSizes);
-      
+
       // 4. Add reorder history entry
       const reorderEntry = {
         reorderId: `REORDER-${Date.now()}`,
@@ -554,7 +579,7 @@ export const useInventoryStore = create((set, get) => ({
           .flatMap(item => item.sizes)
           .find(s => s.size === size)?.quantity || 0
       };
-      
+
       console.log('📦 Updating Firebase with new sizes and reorder history');
       await updateDoc(doc(db, 'uniform_variants', variantId), {
         sizes: updatedVariantSizes,
@@ -562,7 +587,7 @@ export const useInventoryStore = create((set, get) => ({
         totalReorders: (variantData.totalReorders || 0) + 1,
         updatedAt: new Date()
       });
-      
+
       console.log('✅ Reordered from batch successfully:', reorderEntry);
       return reorderEntry;
     } catch (error) {
@@ -576,7 +601,7 @@ export const useInventoryStore = create((set, get) => ({
     try {
       const variantsQuery = query(collection(db, 'uniform_variants'));
       const variantsSnapshot = await getDocs(variantsQuery);
-      
+
       const stockLevels = [];
       for (const doc of variantsSnapshot.docs) {
         const variant = doc.data();
@@ -595,7 +620,7 @@ export const useInventoryStore = create((set, get) => ({
           });
         }
       }
-      
+
       return stockLevels;
     } catch (error) {
       console.error('Error getting stock levels:', error);
@@ -608,11 +633,11 @@ export const useInventoryStore = create((set, get) => ({
     try {
       const variantRef = doc(db, 'uniform_variants', variantId);
       const variantDoc = await getDoc(variantRef);
-      
+
       if (!variantDoc.exists()) {
         throw new Error('Variant not found');
       }
-      
+
       const variantData = variantDoc.data();
       const updatedSizes = variantData.sizes.map(s => {
         if (s.size === size) {
@@ -620,12 +645,12 @@ export const useInventoryStore = create((set, get) => ({
         }
         return s;
       });
-      
+
       await updateDoc(variantRef, {
         sizes: updatedSizes,
         updatedAt: new Date()
       });
-      
+
       console.log('✅ Reorder level set:', { variantId, size, reorderLevel });
       return true;
     } catch (error) {
@@ -638,12 +663,12 @@ export const useInventoryStore = create((set, get) => ({
   setDefaultReorderLevel: async (variantId, defaultReorderLevel) => {
     try {
       const variantRef = doc(db, 'uniform_variants', variantId);
-      
+
       await updateDoc(variantRef, {
         defaultReorderLevel,
         updatedAt: new Date()
       });
-      
+
       console.log('✅ Default reorder level set:', { variantId, defaultReorderLevel });
       return true;
     } catch (error) {
@@ -657,17 +682,17 @@ export const useInventoryStore = create((set, get) => ({
     try {
       const variantsQuery = query(collection(db, 'uniform_variants'));
       const variantsSnapshot = await getDocs(variantsQuery);
-      
+
       const alerts = [];
-      
+
       for (const doc of variantsSnapshot.docs) {
         const variant = doc.data();
         const defaultReorderLevel = variant.defaultReorderLevel || 5;
-        
+
         variant.sizes?.forEach(sizeData => {
           const reorderLevel = sizeData.reorderLevel || defaultReorderLevel;
           const quantity = sizeData.quantity || 0;
-          
+
           if (quantity <= reorderLevel && quantity > 0) {
             alerts.push({
               variantId: doc.id,
@@ -693,7 +718,7 @@ export const useInventoryStore = create((set, get) => ({
           }
         });
       }
-      
+
       return alerts;
     } catch (error) {
       console.error('Error getting low stock alerts:', error);
@@ -706,11 +731,11 @@ export const useInventoryStore = create((set, get) => ({
     try {
       const batchRef = doc(db, 'batchInventory', batchId);
       const batchDoc = await getDoc(batchRef);
-      
+
       if (!batchDoc.exists()) {
         throw new Error('Batch not found');
       }
-      
+
       const batchData = batchDoc.data();
       const updatedItems = batchData.items.map(item => {
         if (item.variantType === variantType && item.color === color) {
@@ -728,12 +753,12 @@ export const useInventoryStore = create((set, get) => ({
         }
         return item;
       });
-      
+
       await updateDoc(batchRef, {
         items: updatedItems,
         updatedAt: new Date()
       });
-      
+
       console.log('✅ Batch reorder level set:', { batchId, variantType, color, size, reorderLevel });
       return true;
     } catch (error) {
@@ -747,17 +772,17 @@ export const useInventoryStore = create((set, get) => ({
     try {
       const batchQuery = query(collection(db, 'batchInventory'));
       const batchSnapshot = await getDocs(batchQuery);
-      
+
       const alerts = [];
-      
+
       for (const doc of batchSnapshot.docs) {
         const batch = doc.data();
-        
+
         batch.items?.forEach(item => {
           item.sizes?.forEach(sizeData => {
             const reorderLevel = sizeData.reorderLevel || 10; // Default batch reorder at 10
             const quantity = sizeData.quantity || 0;
-            
+
             if (quantity <= reorderLevel && quantity > 0) {
               alerts.push({
                 batchId: doc.id,
@@ -786,7 +811,7 @@ export const useInventoryStore = create((set, get) => ({
           });
         });
       }
-      
+
       return alerts;
     } catch (error) {
       console.error('Error getting batch low stock alerts:', error);

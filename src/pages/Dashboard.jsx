@@ -10,6 +10,8 @@ import { useBatchStore } from '../stores/batchStore';
 import DynamicCharts from '../components/dashboard/DynamicCharts';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getAggregatedAllocationData } from '../utils/allocationTracker';
+import { Warehouse } from 'lucide-react';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -46,7 +48,7 @@ const QuickStat = ({ title, value, icon: Icon, color, link }) => {
             <div className={`p-3.5 rounded-2xl bg-${color}-500/10 ring-1 ring-${color}-500/20`}>
               <Icon className={`w-6 h-6 text-${color}-500`} strokeWidth={1.5} />
             </div>
-            <ArrowRight 
+            <ArrowRight
               className={`w-5 h-5 text-${color}-500/50 group-hover:text-${color}-500 group-hover:translate-x-1 transition-all duration-300`}
               strokeWidth={1.5}
             />
@@ -73,7 +75,9 @@ const Dashboard = () => {
     totalInventory: 0,
     activeSchools: 0,
     totalRevenue: 0,
-    totalOrders: 0
+    totalOrders: 0,
+    warehouseStock: 0,
+    allocationRate: 0
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +99,7 @@ const Dashboard = () => {
           fetchOrders(),
           fetchBatches()
         ]);
-        
+
         // Fetch recent activity
         await fetchRecentActivity();
       } catch (error) {
@@ -117,7 +121,7 @@ const Dashboard = () => {
     try {
       // Create an array to store all activity
       let allActivity = [];
-      
+
       // Fetch recent orders
       const ordersQuery = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(3));
       const ordersSnapshot = await getDocs(ordersQuery);
@@ -130,7 +134,7 @@ const Dashboard = () => {
         iconColor: 'accent'
       }));
       allActivity = [...allActivity, ...recentOrders];
-      
+
       // Fetch recent batches
       const batchesQuery = query(collection(db, 'batchInventory'), orderBy('createdAt', 'desc'), limit(3));
       const batchesSnapshot = await getDocs(batchesQuery);
@@ -143,7 +147,7 @@ const Dashboard = () => {
         iconColor: 'primary'
       }));
       allActivity = [...allActivity, ...recentBatches];
-      
+
       // Fetch recent schools
       const schoolsQuery = query(collection(db, 'schools'), orderBy('createdAt', 'desc'), limit(3));
       const schoolsSnapshot = await getDocs(schoolsQuery);
@@ -156,7 +160,7 @@ const Dashboard = () => {
         iconColor: 'secondary'
       }));
       allActivity = [...allActivity, ...recentSchools];
-      
+
       // Sort by timestamp (newest first) and take the 5 most recent
       allActivity.sort((a, b) => b.timestamp - a.timestamp);
       setRecentActivity(allActivity.slice(0, 5));
@@ -184,35 +188,42 @@ const Dashboard = () => {
     // Count total orders
     const totalOrders = orders.length;
 
+    // Calculate allocation data from batches
+    const allocationData = getAggregatedAllocationData(batches);
+    const warehouseStock = allocationData.totalUnallocated;
+    const allocationRate = parseFloat(allocationData.allocationRate) || 0;
+
     setStats({
       totalInventory,
       activeSchools,
       totalRevenue,
-      totalOrders
+      totalOrders,
+      warehouseStock,
+      allocationRate
     });
   };
 
   // Function to format time ago
   const timeAgo = (date) => {
     if (!date) return 'Unknown time';
-    
+
     const seconds = Math.floor((new Date() - date) / 1000);
-    
+
     let interval = Math.floor(seconds / 31536000);
     if (interval >= 1) return interval + (interval === 1 ? ' year ago' : ' years ago');
-    
+
     interval = Math.floor(seconds / 2592000);
     if (interval >= 1) return interval + (interval === 1 ? ' month ago' : ' months ago');
-    
+
     interval = Math.floor(seconds / 86400);
     if (interval >= 1) return interval + (interval === 1 ? ' day ago' : ' days ago');
-    
+
     interval = Math.floor(seconds / 3600);
     if (interval >= 1) return interval + (interval === 1 ? ' hour ago' : ' hours ago');
-    
+
     interval = Math.floor(seconds / 60);
     if (interval >= 1) return interval + (interval === 1 ? ' minute ago' : ' minutes ago');
-    
+
     return Math.floor(seconds) + (Math.floor(seconds) === 1 ? ' second ago' : ' seconds ago');
   };
 
@@ -278,6 +289,13 @@ const Dashboard = () => {
             color="amber"
             link="/orders"
           />
+          <QuickStat
+            title="Warehouse Stock"
+            value={loading ? "Loading..." : `${stats.warehouseStock.toLocaleString()} pcs`}
+            icon={Warehouse}
+            color="orange"
+            link="/batches"
+          />
         </div>
 
         {/* Main Content Grid */}
@@ -292,7 +310,7 @@ const Dashboard = () => {
                 <Package className="text-primary" strokeWidth={1.5} />
                 Analytics Hub
               </h2>
-              <DynamicCharts 
+              <DynamicCharts
                 products={products}
                 orders={orders}
                 schools={schools}
