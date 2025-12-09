@@ -57,6 +57,10 @@ const BatchInventory = () => {
   // State for Edit Modal
   const [editingBatch, setEditingBatch] = useState(null);
 
+  // Filter States
+  const [selectedYear, setSelectedYear] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All'); // 'All', 'Depleted', 'Available'
+
   const formatCreatorName = (createdBy) => {
     if (!createdBy) return 'N/A';
 
@@ -147,13 +151,34 @@ const BatchInventory = () => {
     setLocalBatches(batches);
   }, [batches]);
 
-  const filteredBatches = localBatches.filter(batch =>
-    batch && (
+  const filteredBatches = localBatches.filter(batch => {
+    const matchesSearch = (
       (batch?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (batch?.type?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (batch?.createdBy?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    )
-  );
+    );
+
+    const batchDate = batch.createdAt?.seconds ? new Date(batch.createdAt.seconds * 1000) : new Date();
+    const matchesYear = selectedYear === 'All' || batchDate.getFullYear().toString() === selectedYear;
+
+    const totalQuantity = batch.items?.reduce((sum, item) => sum + item.sizes?.reduce((sizeSum, size) => sizeSum + (size.quantity || 0), 0), 0) || 0;
+    const isDepleted = totalQuantity === 0;
+
+    let matchesStatus = true;
+    if (selectedStatus === 'Depleted') {
+      matchesStatus = isDepleted;
+    } else if (selectedStatus === 'Available') {
+      matchesStatus = !isDepleted;
+    }
+
+    return matchesSearch && matchesYear && matchesStatus;
+  });
+
+  // Get unique years for filter
+  const years = ['All', ...new Set(localBatches.map(batch => {
+    const date = batch.createdAt?.seconds ? new Date(batch.createdAt.seconds * 1000) : new Date();
+    return date.getFullYear().toString();
+  }))].sort((a, b) => b - a);
 
   const handleDeleteClick = (batch) => {
     if (!batch?.id) {
@@ -271,7 +296,7 @@ const BatchInventory = () => {
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {filteredBatches.reduce((sum, batch) =>
               sum + (batch?.items?.reduce((itemSum, item) =>
-                itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + (size?.quantity || 0), 0) || 0), 0) || 0), 0
+                itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + (size.initialQuantity !== undefined ? size.initialQuantity : (size.quantity || 0)), 0) || 0), 0) || 0), 0
             )} pcs
           </div>
         </motion.div>
@@ -283,21 +308,45 @@ const BatchInventory = () => {
           <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">Total Value</div>
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             ${filteredBatches.reduce((sum, batch) => sum + (batch?.items?.reduce((itemSum, item) =>
-              itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + ((size?.quantity || 0) * (item?.price || 0)), 0) || 0), 0) || 0), 0).toLocaleString()}
+              itemSum + (item?.sizes?.reduce((sizeSum, size) => sizeSum + ((size.initialQuantity !== undefined ? size.initialQuantity : (size.quantity || 0)) * (item?.price || 0)), 0) || 0), 0) || 0), 0).toLocaleString()}
           </div>
         </motion.div>
       </motion.div>
 
-      {/* Search */}
-      <div className="relative">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search batches..."
-          className="w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow text-sm"
-        />
-        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search batches..."
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow text-sm"
+          />
+          <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        </div>
+
+        <div className="flex gap-4">
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm min-w-[120px]"
+          >
+            {years.map(year => (
+              <option key={year} value={year}>{year === 'All' ? 'All Years' : year}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm min-w-[140px]"
+          >
+            <option value="All">All Status</option>
+            <option value="Available">Available</option>
+            <option value="Depleted">Depleted</option>
+          </select>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

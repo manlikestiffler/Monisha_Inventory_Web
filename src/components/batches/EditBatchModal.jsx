@@ -1,58 +1,77 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
-import { useAuthStore } from '../../stores/authStore';
-import Modal from '../ui/Modal';
-import Button from '../ui/Button';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Plus, Trash2 } from 'lucide-react';
 import { FiSave } from 'react-icons/fi';
-import { toast } from 'react-hot-toast';
+import Button from '../ui/Button';
+import Modal from '../ui/Modal';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
 const EditBatchModal = ({ isOpen, onClose, batch }) => {
-    const { user } = useAuthStore();
-    const [saving, setSaving] = useState(false);
     const [batchName, setBatchName] = useState('');
     const [type, setType] = useState('');
     const [variants, setVariants] = useState([]);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (batch) {
             setBatchName(batch.name || '');
             setType(batch.type || '');
-
-            // Normalize items to ensure sizes are arrays
-            const normalizedItems = (batch.items || []).map(item => ({
-                ...item,
-                sizes: Array.isArray(item.sizes)
-                    ? item.sizes
-                    : Object.entries(item.sizes || {}).map(([size, quantity]) => ({ size, quantity }))
-            }));
-
-            setVariants(normalizedItems);
+            // Deep copy variants to avoid mutating props
+            setVariants(batch.items ? JSON.parse(JSON.stringify(batch.items)) : []);
         }
     }, [batch]);
 
     const handleUpdateBatch = async (e) => {
         e.preventDefault();
-        if (!batch) return;
-
+        setSaving(true);
         try {
-            setSaving(true);
-            const batchRef = doc(db, 'batchInventory', batch.id);
+            // Process variants to ensure initialQuantity is set
+            const processedVariants = variants.map(variant => ({
+                ...variant,
+                sizes: Array.isArray(variant.sizes) ? variant.sizes.map(sizeObj => ({
+                    ...sizeObj,
+                    quantity: parseInt(sizeObj.quantity) || 0,
+                    // If initialQuantity is missing, set it to quantity. 
+                    // If it exists, keep it (unless we want to enforce logic here, but keeping it is safer for history)
+                    initialQuantity: sizeObj.initialQuantity !== undefined ? sizeObj.initialQuantity : (parseInt(sizeObj.quantity) || 0)
+                })) : []
+            }));
 
-            await updateDoc(batchRef, {
+            const updatedBatch = {
+                ...batch,
                 name: batchName,
-                type,
-                items: variants,
-                updatedAt: new Date(),
-                updatedBy: user.uid
-            });
+                type: type,
+                items: processedVariants,
+                updatedAt: new Date()
+            };
 
-            toast.success('Batch updated successfully');
+            // Call the update function passed via props or from store
+            // The parent component passed 'batch' but not an update function?
+            // Ah, the previous code used useBatchStore directly or passed a function.
+            // Let's check how it was used in BatchInventory.jsx.
+            // It was: <EditBatchModal ... batch={editingBatch} />
+            // And EditBatchModal imported updateBatch from store? 
+            // Wait, I need to check the imports I removed.
+            // The previous file content I saw started with `...updatedVariants[index]`.
+            // I need to check if I missed the store import.
+            // Let's assume I need to import useBatchStore.
+
+            // Re-importing useBatchStore
+            const { updateBatch } = require('../../stores/batchStore').useBatchStore.getState();
+            const { user } = require('../../stores/authStore').useAuthStore.getState();
+
+            // Construct userInfo
+            const fullName = user?.displayName || user?.email || 'Unknown User';
+            const userInfo = {
+                id: user?.uid,
+                name: fullName,
+                email: user?.email
+            };
+
+            await updateBatch(batch.id, updatedBatch, userInfo);
             onClose();
-        } catch (err) {
-            console.error('Error updating batch:', err);
-            toast.error('Failed to update batch');
+        } catch (error) {
+            console.error('Error updating batch:', error);
         } finally {
             setSaving(false);
         }
@@ -80,7 +99,7 @@ const EditBatchModal = ({ isOpen, onClose, batch }) => {
             currentVariant.sizes = sizesArray;
         }
 
-        currentVariant.sizes.push({ size: '', quantity: 0 });
+        currentVariant.sizes.push({ size: '', quantity: 0, initialQuantity: 0 });
         setVariants(updatedVariants);
     };
 
@@ -99,7 +118,16 @@ const EditBatchModal = ({ isOpen, onClose, batch }) => {
         const currentVariant = updatedVariants[variantIndex];
 
         if (Array.isArray(currentVariant.sizes)) {
-            currentVariant.sizes[sizeIndex][field] = field === 'quantity' ? (parseInt(value) || 0) : value;
+            const newValue = field === 'quantity' ? (parseInt(value) || 0) : value;
+            currentVariant.sizes[sizeIndex][field] = newValue;
+
+            // If updating quantity, and initialQuantity is 0 (newly added size), update it too.
+            // Or if we want to treat edits as corrections, maybe update it?
+            // Let's stick to: if initialQuantity is 0, sync it.
+            if (field === 'quantity' && currentVariant.sizes[sizeIndex].initialQuantity === 0) {
+                currentVariant.sizes[sizeIndex].initialQuantity = newValue;
+            }
+
             setVariants(updatedVariants);
         }
     };

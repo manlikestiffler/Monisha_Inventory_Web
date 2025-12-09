@@ -57,7 +57,7 @@ export const useBatchStore = create((set, get) => ({
       const batchDoc = await getDoc(doc(db, 'batchInventory', id));
       if (batchDoc.exists()) {
         const data = batchDoc.data();
-        return { 
+        return {
           ...data,
           id: batchDoc.id, // Must come AFTER spread to overwrite any local id field
           createdAt: data.createdAt?.toDate(),
@@ -76,7 +76,7 @@ export const useBatchStore = create((set, get) => ({
     const unsubscribe = onSnapshot(batchRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
-        callback({ 
+        callback({
           ...data,
           id: doc.id, // Must come AFTER spread to overwrite any local id field
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
@@ -100,7 +100,7 @@ export const useBatchStore = create((set, get) => ({
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      
+
       // Update local state
       const newBatch = {
         id: docRef.id,
@@ -108,7 +108,7 @@ export const useBatchStore = create((set, get) => ({
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       set((state) => ({
         batches: [...state.batches, newBatch]
       }));
@@ -124,7 +124,7 @@ export const useBatchStore = create((set, get) => ({
         priority: 'medium',
         icon: '📦'
       }, userInfo);
-      
+
       return newBatch;
     } catch (error) {
       console.error('Error adding batch:', error);
@@ -132,19 +132,33 @@ export const useBatchStore = create((set, get) => ({
     }
   },
 
-  updateBatch: async (id, data) => {
+  updateBatch: async (id, data, userInfo) => {
     try {
       const batchRef = doc(db, 'batchInventory', id);
       await updateDoc(batchRef, {
         ...data,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: userInfo?.id || 'unknown'
       });
 
       set((state) => ({
         batches: state.batches.map((b) =>
-          b.id === id ? { ...b, ...data, updatedAt: new Date() } : b
+          b.id === id ? { ...b, ...data, updatedAt: new Date(), updatedBy: userInfo?.id || 'unknown' } : b
         )
       }));
+
+      // Create notification for batch update
+      if (userInfo) {
+        const { addNotification } = useNotificationStore.getState();
+        await addNotification({
+          type: 'batch_updated',
+          title: 'Batch Updated',
+          message: `Batch "${data.name || 'Unknown'}" was updated by ${userInfo.name || 'Unknown User'}`,
+          category: 'inventory',
+          priority: 'low',
+          icon: '📝'
+        }, userInfo);
+      }
     } catch (error) {
       console.error('Error updating batch:', error);
       throw error;
@@ -157,10 +171,10 @@ export const useBatchStore = create((set, get) => ({
       const { batches } = get();
       const batch = batches.find(b => b.id === id);
       const batchName = batch?.name || batch?.batchNumber || 'Unknown Batch';
-      
+
       // Delete from Firebase
       await deleteDoc(doc(db, 'batchInventory', id));
-      
+
       // Update local state
       set((state) => ({
         batches: state.batches.filter(batch => batch.id !== id)

@@ -10,13 +10,13 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
   // Reduced logging - only log when data changes significantly
   const dataHash = `${products?.length || 0}-${orders?.length || 0}-${schools?.length || 0}-${batches?.length || 0}`;
   const [lastDataHash, setLastDataHash] = useState('');
-  
+
   useEffect(() => {
     if (dataHash !== lastDataHash) {
-      console.log('📊 DynamicCharts data updated:', { 
-        products: products?.length, 
-        orders: orders?.length, 
-        schools: schools?.length, 
+      console.log('📊 DynamicCharts data updated:', {
+        products: products?.length,
+        orders: orders?.length,
+        schools: schools?.length,
         batches: batches?.length
       });
       setLastDataHash(dataHash);
@@ -43,7 +43,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
   // Process data when props change
   useEffect(() => {
     if (loading) return;
-    
+
     processData();
   }, [products, orders, schools, batches, loading]);
 
@@ -72,75 +72,53 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
 
     // Process size demand data from batches
     processSizeDemandData(newChartData);
-    
+
     // Process revenue data from orders
     processRevenueData(newChartData);
-    
+
     // Process top products data
     processTopProductsData(newChartData);
-    
+
     // Process inventory by school data
     processInventoryBySchoolData(newChartData);
-    
+
     // Process orders by school data
     processOrdersBySchoolData(newChartData);
-    
+
     console.log('📊 Processed chart data:', newChartData);
     setChartData(newChartData);
   };
 
   const processSizeDemandData = (newChartData) => {
-    console.log('📏 Processing size demand data:', { 
-      orders: orders?.length, 
-      products: products?.length, 
+    console.log('📏 Processing size demand data:', {
+      orders: orders?.length,
+      products: products?.length,
       batches: batches?.length,
       productsData: products,
       batchesData: batches
     });
-    
+
     // Process size demand from actual inventory data
     const sizeDemand = {};
     const currentYear = new Date().getFullYear();
-    
+
     // Initialize size demand structure
     newChartData.analytics.demand[currentYear] = [];
-    
-    // Process orders for actual size demand
-    orders.forEach(order => {
-      if (order.items && Array.isArray(order.items)) {
-        order.items.forEach(item => {
-          if (item.sizes && Array.isArray(item.sizes)) {
-            item.sizes.forEach(sizeInfo => {
-              const size = sizeInfo.size || sizeInfo.name;
-              const quantity = sizeInfo.quantity || 0;
-              
-              if (size && quantity > 0) {
-                if (!sizeDemand[size]) {
-                  sizeDemand[size] = 0;
-                }
-                sizeDemand[size] += quantity;
-              }
-            });
-          }
-        });
-      }
-    });
-    
-    // If no order data, analyze from batch inventory
-    if (Object.keys(sizeDemand).length === 0 && batches.length > 0) {
+
+    // 1. Add Current Stock (Batches) - Warehouse
+    // Use initialQuantity if available to capture historical volume
+    if (batches.length > 0) {
       batches.forEach(batch => {
         if (batch.items && Array.isArray(batch.items)) {
           batch.items.forEach(item => {
             if (item.sizes && Array.isArray(item.sizes)) {
               item.sizes.forEach(sizeInfo => {
                 const size = sizeInfo.size || sizeInfo.name;
-                const quantity = sizeInfo.quantity || 0;
-                
-                if (size && quantity > 0) {
-                  if (!sizeDemand[size]) {
-                    sizeDemand[size] = 0;
-                  }
-                  // Use current stock as proxy for demand
+                // Use initialQuantity if available, otherwise quantity
+                const quantity = sizeInfo.initialQuantity !== undefined ? sizeInfo.initialQuantity : (sizeInfo.quantity || 0);
+
+                if (size) {
+                  if (!sizeDemand[size]) sizeDemand[size] = 0;
                   sizeDemand[size] += quantity;
                 }
               });
@@ -149,57 +127,58 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         }
       });
     }
-    
-    // If still no data, analyze from product inventory (uniform_variants)
-    if (Object.keys(sizeDemand).length === 0 && products.length > 0) {
+
+    // 2. Add School Inventory (Products) - Distributed but not sold
+    if (products.length > 0) {
       products.forEach(product => {
-        // Check variants first
         if (product.variants && Array.isArray(product.variants)) {
           product.variants.forEach(variant => {
             if (variant.sizes && Array.isArray(variant.sizes)) {
               variant.sizes.forEach(sizeInfo => {
                 const size = sizeInfo.size || sizeInfo.name;
                 const quantity = sizeInfo.quantity || 0;
-                const allocated = sizeInfo.allocated || 0;
-                
+
                 if (size) {
-                  if (!sizeDemand[size]) {
-                    sizeDemand[size] = 0;
-                  }
-                  // Use allocated + current stock as demand indicator
-                  sizeDemand[size] += allocated + quantity;
+                  if (!sizeDemand[size]) sizeDemand[size] = 0;
+                  sizeDemand[size] += quantity;
                 }
               });
             }
           });
         }
-        // Check direct sizes
-        else if (product.sizes && Array.isArray(product.sizes)) {
-          product.sizes.forEach(sizeInfo => {
-            const size = sizeInfo.size || sizeInfo.name;
-            const quantity = sizeInfo.quantity || 0;
-            const allocated = sizeInfo.allocated || 0;
-            
-            if (size) {
-              if (!sizeDemand[size]) {
-                sizeDemand[size] = 0;
-              }
-              sizeDemand[size] += allocated + quantity;
+      });
+    }
+
+    // 3. Add Sold Items (Allocations) - Depleted
+    if (products.length > 0) {
+      products.forEach(product => {
+        if (product.variants && Array.isArray(product.variants)) {
+          product.variants.forEach(variant => {
+            if (variant.allocationHistory && Array.isArray(variant.allocationHistory)) {
+              variant.allocationHistory.forEach(allocation => {
+                const size = allocation.size;
+                const quantity = allocation.quantity || 0;
+
+                if (size) {
+                  if (!sizeDemand[size]) sizeDemand[size] = 0;
+                  sizeDemand[size] += quantity;
+                }
+              });
             }
           });
         }
       });
     }
-    
+
     // Convert to chart format
     const colors = getChartColors();
     const colorArray = getChartColorArray(Object.keys(sizeDemand).length);
-    
+
     const sizeData = Object.entries(sizeDemand)
       .map(([size, totalSales], index) => {
         let demandCategory = 'Low';
         let color = colors.danger;
-        
+
         if (totalSales > 50) {
           demandCategory = 'High';
           color = colors.success;
@@ -207,7 +186,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
           demandCategory = 'Medium';
           color = colors.warning;
         }
-        
+
         return {
           size,
           totalSales,
@@ -216,7 +195,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         };
       })
       .sort((a, b) => b.totalSales - a.totalSales);
-    
+
     console.log('📊 Size demand result:', sizeData);
     newChartData.analytics.demand[currentYear] = sizeData;
   };
@@ -224,97 +203,69 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
   const processRevenueData = (newChartData) => {
     // Group orders by month
     const monthlyRevenue = {};
-    
+
     // Initialize all months
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     months.forEach(month => {
       monthlyRevenue[month] = 0;
     });
-    
-    // Calculate revenue by month for the current year
+
+    // Calculate revenue by month for the current year using Allocations
     const currentYear = new Date().getFullYear();
-    
-    orders.forEach(order => {
-      const date = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt?.seconds * 1000);
-      
-      // Only include orders from current year
-      if (date.getFullYear() === currentYear) {
-        const month = months[date.getMonth()];
-        monthlyRevenue[month] += (order.totalAmount || 0);
-      }
-    });
-    
+
+    if (products.length > 0) {
+      products.forEach(product => {
+        if (product.variants && Array.isArray(product.variants)) {
+          product.variants.forEach(variant => {
+            if (variant.allocationHistory && Array.isArray(variant.allocationHistory)) {
+              variant.allocationHistory.forEach(allocation => {
+                if (allocation.allocatedAt) {
+                  const date = new Date(allocation.allocatedAt);
+                  if (date.getFullYear() === currentYear) {
+                    const month = months[date.getMonth()];
+                    const revenue = (Number(allocation.quantity) || 0) * (Number(product.price) || 0);
+                    monthlyRevenue[month] += revenue;
+                  }
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+
     // Convert to array format
     const revenueData = months.map(month => ({
       month,
       revenue: monthlyRevenue[month]
     }));
-    
+
     newChartData.financials.revenue = revenueData;
   };
 
   const processTopProductsData = (newChartData) => {
     console.log('🏆 Processing top products data:', { orders: orders?.length, products: products?.length });
-    
-    // Count product sales from orders
+
+    // Count product sales from Allocations
     const productSales = {};
-    
-    orders.forEach(order => {
-      if (order.items && Array.isArray(order.items)) {
-        order.items.forEach(item => {
-          const productName = item.productName || item.name || 'Unknown Product';
-          const quantity = item.quantity || 0;
-          
-          if (!productSales[productName]) {
-            productSales[productName] = 0;
-          }
-          productSales[productName] += quantity;
-        });
-      }
-    });
-    
-    // If no order data, use actual product inventory data
-    if (Object.keys(productSales).length === 0 && products.length > 0) {
+
+    if (products.length > 0) {
       products.forEach(product => {
         const productName = product.name || product.productName || 'Unknown Product';
-        
-        // For uniforms with variants, sum up all variant quantities
+
         if (product.variants && Array.isArray(product.variants)) {
-          let totalQuantity = 0;
           product.variants.forEach(variant => {
-            if (variant.sizes && Array.isArray(variant.sizes)) {
-              variant.sizes.forEach(size => {
-                // Use allocated quantity as proxy for sales/demand
-                totalQuantity += (size.allocated || 0);
-                // If no allocated data, use a portion of current stock as proxy
-                if (!size.allocated && size.quantity > 0) {
-                  totalQuantity += Math.floor(size.quantity * 0.3); // Assume 30% has been sold
-                }
+            if (variant.allocationHistory && Array.isArray(variant.allocationHistory)) {
+              variant.allocationHistory.forEach(allocation => {
+                if (!productSales[productName]) productSales[productName] = 0;
+                productSales[productName] += (Number(allocation.quantity) || 0);
               });
             }
           });
-          
-          if (totalQuantity > 0) {
-            productSales[productName] = totalQuantity;
-          }
-        }
-        // For products with direct sizes (like raw materials)
-        else if (product.sizes && Array.isArray(product.sizes)) {
-          let totalQuantity = 0;
-          product.sizes.forEach(size => {
-            totalQuantity += (size.allocated || 0);
-            if (!size.allocated && size.quantity > 0) {
-              totalQuantity += Math.floor(size.quantity * 0.3);
-            }
-          });
-          
-          if (totalQuantity > 0) {
-            productSales[productName] = totalQuantity;
-          }
         }
       });
     }
-    
+
     // Convert to chart format
     const colorArray = getChartColorArray(Object.keys(productSales).length);
     const topProducts = Object.entries(productSales)
@@ -325,24 +276,24 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
       }))
       .sort((a, b) => b.sales - a.sales)
       .slice(0, 5); // Take top 5
-    
+
     console.log('📊 Top products result:', topProducts);
     newChartData.financials.topProducts = topProducts;
   };
 
   const processInventoryBySchoolData = (newChartData) => {
-    console.log('🏫 Processing inventory by school data:', { 
-      schools: schools?.length, 
+    console.log('🏫 Processing inventory by school data:', {
+      schools: schools?.length,
       products: products?.length,
       batches: batches?.length,
       schoolsData: schools,
       productsData: products,
       batchesData: batches
     });
-    
+
     // Use actual inventory data from batches and products
     const schoolInventory = {};
-    
+
     // Initialize with schools data
     schools.forEach(school => {
       schoolInventory[school.id] = {
@@ -352,12 +303,12 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         outOfStock: 0
       };
     });
-    
+
     // Count total inventory from all sources
     let totalInStock = 0;
     let totalLowStock = 0;
     let totalOutOfStock = 0;
-    
+
     // Process batch inventory data
     batches.forEach(batch => {
       if (batch.items && Array.isArray(batch.items)) {
@@ -365,7 +316,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
           if (item.sizes && Array.isArray(item.sizes)) {
             item.sizes.forEach(size => {
               const quantity = size.quantity || 0;
-              
+
               if (quantity === 0) {
                 totalOutOfStock++;
               } else if (quantity <= 5) {
@@ -378,8 +329,10 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         });
       }
     });
-    
+
     // Process product inventory data (uniform_variants)
+    // Process product inventory data (uniform_variants)
+    // Calculate Total Volume Handled (Historical)
     products.forEach(product => {
       // Check if product has variants
       if (product.variants && Array.isArray(product.variants)) {
@@ -387,13 +340,16 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
           if (variant.sizes && Array.isArray(variant.sizes)) {
             variant.sizes.forEach(size => {
               const quantity = size.quantity || 0;
-              
+              const allocated = size.allocated || 0;
+              const totalVolume = quantity + allocated;
+
+              // We can categorize based on current stock status, but count towards total volume
               if (quantity === 0) {
-                totalOutOfStock++;
+                totalOutOfStock += totalVolume; // Count historical volume even if out of stock
               } else if (quantity <= 5) {
-                totalLowStock++;
+                totalLowStock += totalVolume;
               } else {
-                totalInStock++;
+                totalInStock += totalVolume;
               }
             });
           }
@@ -403,20 +359,22 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
       else if (product.sizes && Array.isArray(product.sizes)) {
         product.sizes.forEach(size => {
           const quantity = size.quantity || 0;
-          
+          const allocated = size.allocated || 0;
+          const totalVolume = quantity + allocated;
+
           if (quantity === 0) {
-            totalOutOfStock++;
+            totalOutOfStock += totalVolume;
           } else if (quantity <= 5) {
-            totalLowStock++;
+            totalLowStock += totalVolume;
           } else {
-            totalInStock++;
+            totalInStock += totalVolume;
           }
         });
       }
     });
-    
+
     console.log('📊 Inventory totals:', { totalInStock, totalLowStock, totalOutOfStock });
-    
+
     // If we have inventory data and schools, distribute it
     if ((totalInStock > 0 || totalLowStock > 0 || totalOutOfStock > 0) && schools.length > 0) {
       schools.forEach((school, index) => {
@@ -424,7 +382,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         const policyCount = school.uniformPolicy?.length || 1;
         const totalPolicies = schools.reduce((sum, s) => sum + (s.uniformPolicy?.length || 1), 0);
         const schoolFactor = policyCount / Math.max(1, totalPolicies);
-        
+
         schoolInventory[school.id] = {
           name: school.name || 'Unknown School',
           inStock: Math.max(1, Math.floor(totalInStock * schoolFactor)),
@@ -433,7 +391,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         };
       });
     }
-    
+
     // Convert to array format
     const inventoryBySchool = Object.values(schoolInventory)
       .filter(school => school.inStock > 0 || school.lowStock > 0 || school.outOfStock > 0)
@@ -444,18 +402,18 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         return totalB - totalA;
       })
       .slice(0, 5); // Take top 5 schools
-    
+
     console.log('📊 Final inventory by school result:', inventoryBySchool);
     newChartData.schools.inventoryPerSchool = inventoryBySchool;
   };
 
   const processOrdersBySchoolData = (newChartData) => {
     console.log('📦 Processing orders by school data:', { schools: schools?.length, orders: orders?.length });
-    
+
     // Count orders by school
     const schoolOrders = {};
     const colorArray = getChartColorArray(10);
-    
+
     // Initialize with schools data
     schools.forEach(school => {
       schoolOrders[school.id] = {
@@ -464,11 +422,11 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         color: colorArray[0]
       };
     });
-    
+
     // Count orders by school
     orders.forEach(order => {
       if (!order.schoolId) return;
-      
+
       // Skip if school doesn't exist in our data
       if (!schoolOrders[order.schoolId]) {
         schoolOrders[order.schoolId] = {
@@ -477,14 +435,14 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
           color: colorArray[0]
         };
       }
-      
+
       schoolOrders[order.schoolId].value += 1;
     });
-    
+
     // If we have schools, create sample data for visualization
     if (schools.length > 0) {
       const hasOrdersWithSchoolId = orders.some(order => order.schoolId);
-      
+
       if (!hasOrdersWithSchoolId) {
         // Create sample orders for each school
         schools.forEach((school, index) => {
@@ -497,7 +455,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         });
       }
     }
-    
+
     // Convert to array and sort by value
     const ordersBySchool = Object.values(schoolOrders)
       .filter(school => school.value > 0)
@@ -507,7 +465,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         ...school,
         color: colorArray[index % colorArray.length]
       }));
-    
+
     console.log('📊 Orders by school result:', ordersBySchool);
     newChartData.schools.ordersPerSchool = ordersBySchool;
   };
@@ -515,7 +473,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
   const handleCategoryChange = (category) => {
     setActiveCategory(category);
     const newChartId = chartConfig[category].charts[0].id;
-    setActiveChart(newChartId); 
+    setActiveChart(newChartId);
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -533,7 +491,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
     }
     return null;
   };
-  
+
   // Chart configuration
   const chartConfig = {
     analytics: {
@@ -557,7 +515,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
       ],
     },
   };
-  
+
   const renderChart = () => {
     if (loading) {
       return (
@@ -566,12 +524,12 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
         </div>
       );
     }
-    
+
     switch (activeChart) {
       // --- Size Analytics Charts ---
       case 'demand':
         const currentYearData = chartData.analytics.demand[selectedYear] || [];
-        
+
         if (currentYearData.length === 0) {
           return (
             <div className="flex justify-center items-center h-[400px] text-muted-foreground">
@@ -579,7 +537,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
             </div>
           );
         }
-        
+
         return (
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={currentYearData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
@@ -597,7 +555,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
       // --- Financials Charts ---
       case 'revenue':
         const revenueData = chartData.financials.revenue;
-        
+
         if (revenueData.length === 0 || revenueData.every(item => item.revenue === 0)) {
           return (
             <div className="flex justify-center items-center h-[400px] text-muted-foreground">
@@ -605,7 +563,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
             </div>
           );
         }
-        
+
         const primaryColor = getChartColors().primary;
         return (
           <ResponsiveContainer width="100%" height={400}>
@@ -621,7 +579,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
 
       case 'topProducts':
         const topProductsData = chartData.financials.topProducts;
-        
+
         if (topProductsData.length === 0) {
           return (
             <div className="flex justify-center items-center h-[400px] text-muted-foreground">
@@ -629,7 +587,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
             </div>
           );
         }
-        
+
         return (
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={topProductsData} layout="vertical" margin={{ left: 100 }}>
@@ -638,7 +596,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
               <YAxis dataKey="name" type="category" {...getCommonChartProps().yAxis} width={100} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="sales" name="Units Sold" radius={[0, 4, 4, 0]}>
-                 {topProductsData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                {topProductsData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -647,7 +605,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
       // --- School Analytics Charts ---
       case 'inventoryPerSchool':
         const inventoryBySchoolData = chartData.schools.inventoryPerSchool;
-        
+
         if (inventoryBySchoolData.length === 0) {
           return (
             <div className="flex justify-center items-center h-[400px] text-muted-foreground">
@@ -655,7 +613,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
             </div>
           );
         }
-        
+
         const colors = getChartColors();
         return (
           <ResponsiveContainer width="100%" height={400}>
@@ -674,7 +632,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
 
       case 'ordersPerSchool':
         const ordersBySchoolData = chartData.schools.ordersPerSchool;
-        
+
         if (ordersBySchoolData.length === 0) {
           return (
             <div className="flex justify-center items-center h-[400px] text-muted-foreground">
@@ -682,7 +640,7 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
             </div>
           );
         }
-        
+
         return (
           <ResponsiveContainer width="100%" height={400}>
             <PieChart>
@@ -719,11 +677,10 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
           <button
             key={key}
             onClick={() => handleCategoryChange(key)}
-            className={`px-4 py-2 rounded-t-lg text-lg font-semibold transition-all duration-300 ${
-              activeCategory === key
-                ? 'text-slate-800 border-b-2 border-blue-500'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
+            className={`px-4 py-2 rounded-t-lg text-lg font-semibold transition-all duration-300 ${activeCategory === key
+              ? 'text-slate-800 border-b-2 border-blue-500'
+              : 'text-slate-500 hover:text-slate-800'
+              }`}
           >
             {chartConfig[key].name}
           </button>
@@ -732,45 +689,44 @@ const DynamicCharts = ({ products, orders, schools, batches, loading }) => {
 
       {/* --- Sub-chart Toggles --- */}
       <div className="flex justify-between items-center mb-6">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {chartConfig[activeCategory].charts.map((chart) => (
-              <button
-                key={chart.id}
-                onClick={() => setActiveChart(chart.id)}
-                className={`px-4 py-2 rounded-lg transition-all duration-300 whitespace-nowrap ${
-                  activeChart === chart.id
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {chartConfig[activeCategory].charts.map((chart) => (
+            <button
+              key={chart.id}
+              onClick={() => setActiveChart(chart.id)}
+              className={`px-4 py-2 rounded-lg transition-all duration-300 whitespace-nowrap ${activeChart === chart.id
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
-              >
-                {chart.name}
-              </button>
-            ))}
-          </div>
+            >
+              {chart.name}
+            </button>
+          ))}
+        </div>
 
-          {/* --- YEAR TOGGLE (Conditional) --- */}
-          {activeChart === 'demand' && activeCategory === 'analytics' && chartData.analytics.years.length > 0 && (
-            <div className="relative">
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="bg-white/80 border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-3 pr-10 py-2 appearance-none"
-              >
-                {chartData.analytics.years.map(year => (
-                  <option key={year} value={year} className="bg-white text-slate-900">
-                    {year}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                </svg>
-              </div>
+        {/* --- YEAR TOGGLE (Conditional) --- */}
+        {activeChart === 'demand' && activeCategory === 'analytics' && chartData.analytics.years.length > 0 && (
+          <div className="relative">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="bg-white/80 border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-3 pr-10 py-2 appearance-none"
+            >
+              {chartData.analytics.years.map(year => (
+                <option key={year} value={year} className="bg-white text-slate-900">
+                  {year}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+              </svg>
             </div>
-          )}
+          </div>
+        )}
       </div>
-      
+
       <AnimatePresence mode="wait">
         <motion.div
           key={activeChart}

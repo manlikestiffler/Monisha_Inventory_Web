@@ -66,7 +66,7 @@ const CreateBatch = () => {
         batchesSnapshot.docs.forEach(doc => {
           const data = doc.data();
           if (data.type) types.add(data.type);
-          
+
           data.items?.forEach(item => {
             if (item.variantType) variants.add(item.variantType);
             if (item.color) colors.add(item.color);
@@ -89,10 +89,10 @@ const CreateBatch = () => {
   }, []);
 
   // Calculate totals
-  const totalQuantity = batchVariants.reduce((sum, variant) => 
+  const totalQuantity = batchVariants.reduce((sum, variant) =>
     sum + Object.values(variant.sizes).reduce((a, b) => a + (parseInt(b) || 0), 0), 0
   );
-  const totalValue = batchVariants.reduce((sum, variant) => 
+  const totalValue = batchVariants.reduce((sum, variant) =>
     sum + Object.values(variant.sizes).reduce((a, b) => a + ((parseInt(b) || 0) * variant.price), 0), 0
   );
 
@@ -105,28 +105,28 @@ const CreateBatch = () => {
       toast.error('Please enter a quantity.');
       return;
     }
-    
+
     console.log('Adding size:', newSize, 'with quantity:', newQuantity);
-    
+
     // Create a completely new object for sizes
     const newSizes = {};
-    
+
     // Copy all existing sizes if any
     if (currentVariant.sizes) {
       Object.keys(currentVariant.sizes).forEach(key => {
         newSizes[key] = currentVariant.sizes[key];
       });
     }
-    
+
     // Add the new size
     newSizes[newSize] = parseInt(newQuantity, 10);
-    
+
     console.log('New sizes object created:', newSizes);
-    
+
     // First update the ref for immediate access
     sizesRef.current = newSizes;
     console.log('Updated sizesRef:', sizesRef.current);
-    
+
     // Then create a completely new variant object
     const updatedVariant = {
       name: currentVariant.name,
@@ -134,9 +134,9 @@ const CreateBatch = () => {
       price: currentVariant.price,
       sizes: newSizes
     };
-    
+
     console.log('Setting currentVariant to:', updatedVariant);
-    
+
     // Update the state with the new variant object
     setCurrentVariant(updatedVariant);
 
@@ -147,13 +147,13 @@ const CreateBatch = () => {
 
   const handleRemoveSize = (size) => {
     const newSizes = { ...currentVariant.sizes };
-      delete newSizes[size];
-    
+    delete newSizes[size];
+
     setCurrentVariant({
       ...currentVariant,
       sizes: newSizes
     });
-    
+
     // Also update the ref
     sizesRef.current = newSizes;
   };
@@ -162,7 +162,7 @@ const CreateBatch = () => {
     console.log('handleAddVariant triggered');
     console.log('Current Variant State:', currentVariant);
     console.log('Sizes from ref:', sizesRef.current);
-    
+
     // IMPORTANT: Always use the ref for sizes as it's more reliable
     const currentSizes = sizesRef.current;
     console.log('Current sizes being checked:', currentSizes);
@@ -186,19 +186,19 @@ const CreateBatch = () => {
     if (Object.keys(currentSizes).length === 0) {
       toast.error('Please add at least one size.');
       console.log('Validation failed: No sizes added.');
-      
+
       // Debug what happened with the size
       console.log('Debug - newSize:', newSize);
       console.log('Debug - newQuantity:', newQuantity);
       console.log('Debug - sizesRef current value:', sizesRef.current);
-      
+
       // If we have size input but it's not in the ref, try adding it directly
       if (newSize && newQuantity) {
         console.log('Attempting emergency size addition');
         const emergencySizes = {};
         emergencySizes[newSize] = parseInt(newQuantity, 10);
         sizesRef.current = emergencySizes;
-        
+
         // Try again with the emergency size
         if (Object.keys(sizesRef.current).length > 0) {
           console.log('Emergency size added, proceeding with variant addition');
@@ -211,18 +211,18 @@ const CreateBatch = () => {
     }
 
     console.log('Validation passed. Adding variant to batch.');
-    
+
     // Create a complete variant object with sizes from ref
     const variantToAdd = {
       name: currentVariant.name,
       color: currentVariant.color,
       price: currentVariant.price,
-      sizes: {...sizesRef.current} // Always use the ref
+      sizes: { ...sizesRef.current } // Always use the ref
     };
-    
+
     console.log('Adding variant:', variantToAdd);
     setBatchVariants(prev => [...prev, variantToAdd]);
-    
+
     // Reset current variant
     setCurrentVariant({
       name: '',
@@ -230,10 +230,10 @@ const CreateBatch = () => {
       price: '',
       sizes: {}
     });
-    
+
     // Reset sizes ref
     sizesRef.current = {};
-    
+
     console.log('Variant added and currentVariant state reset.');
     toast.success('Variant added to batch!');
   };
@@ -247,21 +247,21 @@ const CreateBatch = () => {
 
     try {
       const { user: authUser, userProfile } = useAuthStore.getState();
-      
+
       // Construct full name from firstName and lastName if available
-      const fullName = userProfile?.firstName && userProfile?.lastName 
+      const fullName = userProfile?.firstName && userProfile?.lastName
         ? `${userProfile.firstName} ${userProfile.lastName}`.trim()
         : userProfile?.displayName || authUser?.displayName || authUser?.email || 'Unknown User';
-      
+
       const userInfo = {
         id: authUser?.uid,
         name: fullName,
         fullName: fullName,
         email: authUser?.email
       };
-      
+
       console.log('🔍 CreateBatch - userInfo:', userInfo);
-      
+
       const batchData = {
         name: batchName,
         type: type,
@@ -271,7 +271,8 @@ const CreateBatch = () => {
           price: parseFloat(variant.price),
           sizes: Object.entries(variant.sizes).map(([size, quantity]) => ({
             size,
-            quantity: parseInt(quantity)
+            quantity: parseInt(quantity),
+            initialQuantity: parseInt(quantity) // Track initial quantity for reporting
           })),
         })),
         totalQuantity,
@@ -287,7 +288,7 @@ const CreateBatch = () => {
       // Use batchStore.addBatch to create batch and notification
       const { addBatch } = useBatchStore.getState();
       await addBatch(batchData, userInfo);
-      
+
       toast.success(`Batch "${batchName}" created successfully!`);
       navigate('/batches');
     } catch (error) {
@@ -296,16 +297,16 @@ const CreateBatch = () => {
   };
 
   // Filter options based on input
-  const filteredTypeOptions = typeOptions.filter(option => 
+  const filteredTypeOptions = typeOptions.filter(option =>
     option.toLowerCase().includes(type.toLowerCase())
   );
-  const filteredVariantOptions = variantOptions.filter(option => 
+  const filteredVariantOptions = variantOptions.filter(option =>
     option.toLowerCase().includes(currentVariant.name.toLowerCase())
   );
-  const filteredColorOptions = colorOptions.filter(option => 
+  const filteredColorOptions = colorOptions.filter(option =>
     option.toLowerCase().includes(currentVariant.color.toLowerCase())
   );
-  const filteredSizeOptions = sizeOptions.filter(option => 
+  const filteredSizeOptions = sizeOptions.filter(option =>
     option.toLowerCase().includes(newSize.toLowerCase())
   );
 
@@ -331,7 +332,7 @@ const CreateBatch = () => {
           {/* Batch Details */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm space-y-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Batch Details</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Batch Name</label>
@@ -554,12 +555,12 @@ const CreateBatch = () => {
 
               {/* Added Variants List */}
               <div className="space-y-4">
-                    {batchVariants.map((variant, index) => (
+                {batchVariants.map((variant, index) => (
                   <div
-                        key={index}
+                    key={index}
                     className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl flex justify-between items-center"
-                      >
-                          <div>
+                  >
+                    <div>
                       <p className="font-semibold text-gray-900 dark:text-gray-100">{variant.name}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">{variant.color} - Price: ${variant.price}</p>
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -567,16 +568,16 @@ const CreateBatch = () => {
                           <span key={size} className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-full">{size}: {quantity}</span>
                         ))}
                       </div>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveVariant(index)}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveVariant(index)}
                       className="text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                          >
+                    >
                       <Trash2 className="w-5 h-5" />
-                          </button>
+                    </button>
                   </div>
                 ))}
-                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -585,18 +586,18 @@ const CreateBatch = () => {
         <div className="col-span-1">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm space-y-6 sticky top-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Batch Summary</h2>
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
                 <span className="text-gray-600 dark:text-gray-400">Total Variants</span>
                 <span className="font-medium text-gray-900 dark:text-gray-100">{batchVariants.length}</span>
               </div>
-              
+
               <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
                 <span className="text-gray-600 dark:text-gray-400">Total Quantity</span>
                 <span className="font-medium text-gray-900 dark:text-gray-100">{totalQuantity} pcs</span>
               </div>
-              
+
               <div className="flex justify-between items-center py-3">
                 <span className="text-gray-600 dark:text-gray-400">Total Value</span>
                 <span className="font-medium text-gray-900 dark:text-gray-100">${totalValue.toFixed(2)}</span>
