@@ -8,6 +8,8 @@ import { useThemeDetector } from '../hooks/useThemeDetector';
 import LoadingScreen from '../components/ui/LoadingScreen';
 import SchoolSelect from '../components/SchoolSelect';
 import { getChartColors, getCommonChartProps } from '../utils/chartColors';
+import { exportToExcel, exportToPDF, exportToDocx } from '../utils/exportHelper';
+import { Download } from 'lucide-react'; // Using lucide-react for consistency
 
 const Reports = () => {
   const [inventoryData, setInventoryData] = useState([]);
@@ -522,125 +524,199 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Dynamic Content Based on Selected Category */}
-        {selectedCategory === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Financial Overview (Realized vs Potential) */}
-            <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-              <h2 className="text-xl font-bold text-base mb-6">Financial Overview (Realized vs Potential)</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={getFinancialOverview()} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                  <Legend />
-                  <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]}>
-                    {getFinancialOverview().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-4 text-center text-sm text-gray-500">
-                Includes value of depleted (sold) items and current stock.
-              </div>
-            </motion.div>
+        {/* Export Handler */}
+        {(() => {
+          const handleExportData = async (data, title, columns) => {
+            const filename = `${title.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}`;
+            try {
+              await exportToExcel(data, columns, title, filename);
+            } catch (e) {
+              console.error("Export failed", e);
+            }
+          };
 
-            {/* Revenue Trend */}
-            <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-              <h2 className="text-xl font-bold text-base mb-6">Revenue Trend (Last 6 Months)</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={getSalesData()}>
-                  <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                  <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                  <YAxis {...getCommonChartProps().yAxis} />
-                  <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
-                  <Line type="monotone" dataKey="revenue" stroke={getChartColors().primary} strokeWidth={3} dot={{ fill: getChartColors().primary }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </motion.div>
-          </div>
-        )}
+          const ExportButton = ({ data, title, columns }) => (
+            <button
+              onClick={() => handleExportData(data, title, columns)}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              title="Export Data"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+          );
 
-        {selectedCategory === 'inventory' && (
-          <div className="space-y-8">
-            {/* Size Demand Pattern (Total Volume) */}
-            <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-              <h2 className="text-xl font-bold text-base mb-6">Size Patterns (Total Volume: Sold + In Stock)</h2>
-              <p className="text-sm text-gray-500 mb-4">This chart includes depleted items to show true historical demand.</p>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={getSizeDemandData()}>
-                  <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                  <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                  <YAxis {...getCommonChartProps().yAxis} />
-                  <Tooltip {...getCommonChartProps().tooltip} />
-                  <Bar dataKey="volume" name="Total Volume" fill={getChartColors().success} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
+          // Define columns for different datasets
+          const overviewColumns = [
+            { header: 'Category', key: 'name', width: 30 },
+            { header: 'Value', key: 'value', width: 20 }
+          ];
 
-            {/* Inventory by Type */}
-            <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-              <h2 className="text-xl font-bold text-base mb-6">Inventory by Type</h2>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={inventoryData}>
-                  <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                  <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                  <YAxis {...getCommonChartProps().yAxis} />
-                  <Tooltip {...getCommonChartProps().tooltip} />
-                  <Bar dataKey="count" fill={getChartColors().primary} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
+          const trendColumns = [
+            { header: 'Month', key: 'name', width: 20 },
+            { header: 'Revenue', key: 'revenue', width: 20 }
+          ];
 
-            {/* Top Variants */}
-            <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-              <h2 className="text-xl font-bold text-base mb-6">Top Variants</h2>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart layout="vertical" data={variantData.slice(0, 8)}>
-                  <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                  <XAxis type="number" {...getCommonChartProps().xAxis} />
-                  <YAxis type="category" dataKey="name" {...getCommonChartProps().yAxis} width={150} />
-                  <Tooltip {...getCommonChartProps().tooltip} />
-                  <Bar dataKey="count" fill={getChartColors().success} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
-          </div>
-        )}
+          const sizeColumns = [
+            { header: 'Size', key: 'name', width: 15 },
+            { header: 'Volume', key: 'volume', width: 15 }
+          ];
 
-        {selectedCategory === 'financials' && (
-          <div className="space-y-8">
-            {/* Year over Year Comparison */}
-            <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-              <h2 className="text-xl font-bold text-base mb-6">Year Over Year Revenue</h2>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={getYearOverYearData()}>
-                  <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                  <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                  <YAxis {...getCommonChartProps().yAxis} />
-                  <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
-                  <Bar dataKey="revenue" fill={getChartColors().primary} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
+          const typeColumns = [
+            { header: 'Type', key: 'name', width: 25 },
+            { header: 'Count', key: 'count', width: 15 }
+          ];
 
-            {/* Monthly Breakdown for Selected Year */}
-            <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-              <h2 className="text-xl font-bold text-base mb-6">Monthly Revenue Breakdown ({selectedYear})</h2>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={getSalesData()}>
-                  <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                  <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                  <YAxis {...getCommonChartProps().yAxis} />
-                  <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
-                  <Line type="monotone" dataKey="revenue" stroke={getChartColors().success} strokeWidth={3} dot={{ fill: getChartColors().success }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </motion.div>
-          </div>
-        )}
+          const variantColumns = [
+            { header: 'Variant', key: 'name', width: 35 },
+            { header: 'Count', key: 'count', width: 15 }
+          ];
+
+          return (
+            <>
+              {/* Dynamic Content Based on Selected Category */}
+              {selectedCategory === 'overview' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Financial Overview (Realized vs Potential) */}
+                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-base">Financial Overview</h2>
+                      <ExportButton data={getFinancialOverview()} title="Financial Overview" columns={overviewColumns} />
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={getFinancialOverview()} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" hide />
+                        <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
+                        <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                        <Legend />
+                        <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]}>
+                          {getFinancialOverview().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 text-center text-sm text-gray-500">
+                      Includes value of depleted (sold) items and current stock.
+                    </div>
+                  </motion.div>
+
+                  {/* Revenue Trend */}
+                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-base">Revenue Trend (Last 6 Months)</h2>
+                      <ExportButton data={getSalesData()} title="Revenue Trend" columns={trendColumns} />
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={getSalesData()}>
+                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
+                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
+                        <YAxis {...getCommonChartProps().yAxis} />
+                        <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
+                        <Line type="monotone" dataKey="revenue" stroke={getChartColors().primary} strokeWidth={3} dot={{ fill: getChartColors().primary }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+                </div>
+              )}
+
+              {selectedCategory === 'inventory' && (
+                <div className="space-y-8">
+                  {/* Size Demand Pattern (Total Volume) */}
+                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-base">Size Patterns</h2>
+                      <ExportButton data={getSizeDemandData()} title="Size Demand" columns={sizeColumns} />
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">This chart includes depleted items to show true historical demand.</p>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={getSizeDemandData()}>
+                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
+                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
+                        <YAxis {...getCommonChartProps().yAxis} />
+                        <Tooltip {...getCommonChartProps().tooltip} />
+                        <Bar dataKey="volume" name="Total Volume" fill={getChartColors().success} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+
+                  {/* Inventory by Type */}
+                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-base">Inventory by Type</h2>
+                      <ExportButton data={inventoryData} title="Inventory by Type" columns={typeColumns} />
+                    </div>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={inventoryData}>
+                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
+                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
+                        <YAxis {...getCommonChartProps().yAxis} />
+                        <Tooltip {...getCommonChartProps().tooltip} />
+                        <Bar dataKey="count" fill={getChartColors().primary} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+
+                  {/* Top Variants */}
+                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-base">Top Variants</h2>
+                      <ExportButton data={variantData.slice(0, 8)} title="Top Variants" columns={variantColumns} />
+                    </div>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart layout="vertical" data={variantData.slice(0, 8)}>
+                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
+                        <XAxis type="number" {...getCommonChartProps().xAxis} />
+                        <YAxis type="category" dataKey="name" {...getCommonChartProps().yAxis} width={150} />
+                        <Tooltip {...getCommonChartProps().tooltip} />
+                        <Bar dataKey="count" fill={getChartColors().success} radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+                </div>
+              )}
+
+              {selectedCategory === 'financials' && (
+                <div className="space-y-8">
+                  {/* Year over Year Comparison */}
+                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-base">Year Over Year Revenue</h2>
+                      <ExportButton data={getYearOverYearData()} title="YoY Revenue" columns={trendColumns} />
+                    </div>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={getYearOverYearData()}>
+                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
+                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
+                        <YAxis {...getCommonChartProps().yAxis} />
+                        <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
+                        <Bar dataKey="revenue" fill={getChartColors().primary} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+
+                  {/* Monthly Breakdown for Selected Year */}
+                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-base">Monthly Revenue Breakdown ({selectedYear})</h2>
+                      <ExportButton data={getSalesData()} title={`Monthly Revenue ${selectedYear}`} columns={trendColumns} />
+                    </div>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <LineChart data={getSalesData()}>
+                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
+                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
+                        <YAxis {...getCommonChartProps().yAxis} />
+                        <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
+                        <Line type="monotone" dataKey="revenue" stroke={getChartColors().success} strokeWidth={3} dot={{ fill: getChartColors().success }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+                </div>
+              )}
+
+            </>
+          );
+        })()}
 
         {selectedCategory === 'schools' && (
           <div className="space-y-8">

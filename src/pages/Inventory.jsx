@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ChevronRight, 
-  Search, 
-  Plus, 
-  Package, 
-  CheckCircle, 
-  AlertTriangle, 
+import {
+  ChevronRight,
+  Search,
+  Plus,
+  Package,
+  CheckCircle,
+  AlertTriangle,
   XCircle,
   Eye,
   Edit2,
@@ -18,7 +18,8 @@ import {
   FileSpreadsheet,
   FileText,
   Box,
-  Layers
+  Layers,
+  Upload
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -32,8 +33,10 @@ import { useInventoryStore } from '../stores/inventoryStore';
 import { collection, getDocs, query, orderBy, doc, getDoc, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getUniformIcon } from '../constants/icons';
-import ExcelJS from 'exceljs';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { exportToExcel, exportToPDF, exportToDocx, generateTemplate } from '../utils/exportHelper';
+import { parseExcel } from '../utils/importHelper';
+import { useRef } from 'react';
+import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthStore } from '../stores/authStore';
 import Modal from '../components/ui/Modal';
 
@@ -46,17 +49,17 @@ const getUniqueLevels = (products) => {
 const calculateTotalInventoryCount = (products) => {
   return products.reduce((total, product) => {
     if (!product.variants || !Array.isArray(product.variants)) return total;
-    
+
     const productTotal = product.variants.reduce((variantTotal, variant) => {
       if (!variant.sizes || !Array.isArray(variant.sizes)) return variantTotal;
-      
+
       const variantSizeTotal = variant.sizes.reduce((sizeTotal, size) => {
         return sizeTotal + (Number(size?.quantity) || 0);
       }, 0);
-      
+
       return variantTotal + variantSizeTotal;
     }, 0);
-    
+
     return total + productTotal;
   }, 0);
 };
@@ -83,7 +86,7 @@ const calculateStockStatus = (variants) => {
     variant.sizes.forEach(size => {
       const quantity = Number(size?.quantity) || 0;
       const reorderLevel = Number(size?.reorderLevel) || Number(variant?.defaultReorderLevel) || 5;
-      
+
       totalQuantity += quantity;
 
       if (quantity === 0) {
@@ -136,7 +139,7 @@ const getDefaultProductImage = (name, type) => {
 
   const bgColor = bgColors[type] || bgColors.default;
   const textColor = 'ffffff'; // white text
-  
+
   // Create a more visually appealing placeholder with the product name and type
   const displayText = `${name}\n(${type})`;
   return `https://placehold.co/400x400/${bgColor}/${textColor}?text=${encodeURIComponent(displayText)}`;
@@ -146,12 +149,12 @@ const getProductImage = (product) => {
   if (product.imageUrl && product.imageUrl.startsWith('http')) {
     return product.imageUrl;
   }
-  
+
   if (product.imageUrl && product.imageUrl.startsWith('gs://')) {
     // Convert Firebase Storage URL if needed
     return product.imageUrl;
   }
-  
+
   return getDefaultProductImage(product.name, product.type);
 };
 
@@ -188,6 +191,8 @@ const Inventory = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [receiveModalData, setReceiveModalData] = useState(null);
+  const fileInputRef = useRef(null);
+  const [importing, setImporting] = useState(false);
 
   // Fetch schools and create a map of id to name
   useEffect(() => {
@@ -253,11 +258,11 @@ const Inventory = () => {
       try {
         // Check what collections actually exist and fetch users
         console.log('Checking for user collections...');
-        
+
         // Try different possible collection names for users
         const possibleCollections = ['inventory_staff', 'inventory_managers', 'staff', 'managers', 'users', 'accounts'];
         const userCollections = {};
-        
+
         for (const collectionName of possibleCollections) {
           try {
             const snapshot = await getDocs(collection(db, collectionName));
@@ -269,18 +274,18 @@ const Inventory = () => {
             console.log(`Collection ${collectionName} not accessible:`, error.message);
           }
         }
-        
+
         // If no user collections found, extract creator info from products and fetch actual user profiles
         if (Object.keys(userCollections).length === 0) {
           console.log('No user collections found. Extracting creator info from products and fetching user profiles...');
-          
+
           // Get products to extract creator UIDs
           const uniformsSnapshot = await getDocs(collection(db, 'uniforms'));
           const materialsSnapshot = await getDocs(collection(db, 'raw_materials'));
-          
+
           const creatorMap = {};
           const creatorUIDs = new Set();
-          
+
           // Extract creator UIDs from products
           [...uniformsSnapshot.docs, ...materialsSnapshot.docs].forEach(doc => {
             const data = doc.data();
@@ -288,24 +293,24 @@ const Inventory = () => {
               creatorUIDs.add(data.createdByUid);
             }
           });
-          
+
           // Fetch actual user profiles from user collections
           const userCollectionsToCheck = ['inventory_staff', 'inventory_managers', 'staff', 'managers', 'users'];
-          
+
           for (const collectionName of userCollectionsToCheck) {
             try {
               const usersSnapshot = await getDocs(collection(db, collectionName));
               usersSnapshot.docs.forEach(doc => {
                 const userData = doc.data();
                 const userId = doc.id;
-                
+
                 if (creatorUIDs.has(userId)) {
-                  const fullName = userData.fullName || 
-                                 (userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}`.trim() : null) ||
-                                 userData.displayName ||
-                                 userData.name ||
-                                 userData.email;
-                  
+                  const fullName = userData.fullName ||
+                    (userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}`.trim() : null) ||
+                    userData.displayName ||
+                    userData.name ||
+                    userData.email;
+
                   creatorMap[userId] = {
                     name: fullName,
                     role: userData.role || 'staff'
@@ -316,7 +321,7 @@ const Inventory = () => {
               console.log(`Could not access ${collectionName}:`, error.message);
             }
           }
-          
+
           // Fallback: extract any remaining creator info from products themselves
           [...uniformsSnapshot.docs, ...materialsSnapshot.docs].forEach(doc => {
             const data = doc.data();
@@ -328,10 +333,10 @@ const Inventory = () => {
               };
             }
           });
-          
+
           console.log('Creator map with full names:', creatorMap);
           setUsersMap(creatorMap);
-          
+
           // Continue with the rest of initialization
           const schoolsQuery = query(collection(db, 'schools'), orderBy('createdAt', 'desc'));
           const schoolsSnapshot = await getDocs(schoolsQuery);
@@ -340,23 +345,23 @@ const Inventory = () => {
             ...doc.data()
           }));
           setSchools(schoolsData);
-          
+
           setupRealtimeListeners();
-          
+
           setTimeout(async () => {
             if (storeProducts.length === 0) {
               console.log('No products from real-time listeners, fetching directly...');
               await fetchProductsDirectly();
             }
           }, 3000);
-          
+
           setLoading(false);
           return;
         }
-        
+
         // Process found user collections
         const allUsers = [];
-        
+
         Object.entries(userCollections).forEach(([collectionName, snapshot]) => {
           snapshot.docs.forEach(doc => {
             const data = doc.data();
@@ -368,10 +373,10 @@ const Inventory = () => {
             });
           });
         });
-        
+
         console.log('Total users found:', allUsers.length);
         setUsers(allUsers);
-        
+
         // Create users map for quick lookup
         const usersMapData = {};
         allUsers.forEach(user => {
@@ -383,7 +388,7 @@ const Inventory = () => {
         });
         setUsersMap(usersMapData);
         console.log('Users map created with', Object.keys(usersMapData).length, 'users:', usersMapData);
-        
+
         // Fetch schools
         const schoolsQuery = query(collection(db, 'schools'), orderBy('createdAt', 'desc'));
         const schoolsSnapshot = await getDocs(schoolsQuery);
@@ -392,14 +397,14 @@ const Inventory = () => {
           ...doc.data()
         }));
         setSchools(schoolsData);
-        
+
         // Wait for user info to be loaded before setting up listeners
         // This ensures we have full names ready when products are displayed
         console.log('User info loaded, setting up real-time listeners...');
-        
+
         // Setup real-time listeners for products
         setupRealtimeListeners();
-        
+
         // Fallback: If no products after 3 seconds, fetch directly
         setTimeout(async () => {
           if (storeProducts.length === 0) {
@@ -407,7 +412,7 @@ const Inventory = () => {
             await fetchProductsDirectly();
           }
         }, 3000);
-        
+
       } catch (error) {
         console.error('Error fetching data:', error);
         setError('Failed to load inventory data');
@@ -417,7 +422,7 @@ const Inventory = () => {
     };
 
     initializeData();
-    
+
     // Cleanup listeners on unmount
     return () => {
       cleanup();
@@ -428,7 +433,7 @@ const Inventory = () => {
   useEffect(() => {
     console.log('Store products changed:', storeProducts?.length || 0);
     console.log('Users map keys:', Object.keys(usersMap).length);
-    
+
     if (storeProducts && storeProducts.length > 0 && Object.keys(usersMap).length > 0) {
       const productsWithUserInfo = storeProducts.map(product => {
         // Check if product already has creator info from store
@@ -439,11 +444,11 @@ const Inventory = () => {
             updatedAt: product.updatedAt?.toDate ? product.updatedAt.toDate() : product.updatedAt
           };
         }
-        
+
         // Use local users map for full names
         const creatorInfo = usersMap[product.createdByUid];
         console.log('Product creator lookup:', product.createdByUid, creatorInfo);
-        
+
         return {
           ...product,
           creatorName: creatorInfo?.name || product.createdByName || product.createdBy || 'N/A',
@@ -571,10 +576,10 @@ const Inventory = () => {
       try {
         const isRawMaterial = productToDelete.type === 'raw_material';
         const { user, userProfile } = useAuthStore.getState();
-        const fullName = userProfile?.firstName && userProfile?.lastName 
+        const fullName = userProfile?.firstName && userProfile?.lastName
           ? `${userProfile.firstName} ${userProfile.lastName}`.trim()
           : userProfile?.displayName || user?.displayName || 'Unknown User';
-        
+
         const userInfo = {
           id: user?.uid,
           name: fullName,
@@ -599,19 +604,19 @@ const Inventory = () => {
     if (product.variants && product.variants.length > 0) {
       const firstVariant = product.variants[0];
       const firstSize = firstVariant.sizes && firstVariant.sizes.length > 0 ? firstVariant.sizes[0] : null;
-      
+
       console.log('🎯 handleReceive - product:', product);
       console.log('🎯 handleReceive - firstVariant:', firstVariant);
       console.log('🎯 handleReceive - firstVariant.id:', firstVariant.id);
-      
+
       if (firstSize) {
         const variantData = {
           ...firstVariant,
           id: firstVariant.id // Explicitly ensure the id is preserved
         };
-        
+
         console.log('🎯 handleReceive - variantData being passed:', variantData);
-        
+
         setReceiveModalData({
           product: product,
           variant: variantData,
@@ -626,113 +631,134 @@ const Inventory = () => {
   };
 
   // Export functions
-  const exportToExcel = async () => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Inventory');
+  const getExportData = () => {
+    return products.map(product => ({
+      name: product.name,
+      level: product.level,
+      school: product.schoolName,
+      type: product.type,
+      status: calculateStockStatus(product.variants).type,
+      stock: product.variants.reduce((total, variant) =>
+        total + variant.sizes.reduce((sum, size) => sum + (size.quantity || 0), 0), 0),
+      creator: product.creatorName,
+      createdAt: product.createdAt ? new Date(product.createdAt.toDate()).toLocaleDateString() : 'Unknown'
+    }));
+  };
 
-    // Add headers
-    worksheet.columns = [
-      { header: 'Product Name', key: 'name', width: 30 },
-      { header: 'Level', key: 'level', width: 20 },
-      { header: 'School', key: 'school', width: 30 },
-      { header: 'Type', key: 'type', width: 20 },
-      { header: 'Status', key: 'status', width: 15 },
-      { header: 'Total Stock', key: 'stock', width: 15 },
-      { header: 'Created By', key: 'creator', width: 25 },
-      { header: 'Created At', key: 'date', width: 20 }
+  const exportColumns = [
+    { header: 'Product Name', key: 'name', width: 30 },
+    { header: 'Level', key: 'level', width: 15 },
+    { header: 'School', key: 'school', width: 25 },
+    { header: 'Type', key: 'type', width: 15 },
+    { header: 'Status', key: 'status', width: 15 },
+    { header: 'Stock', key: 'stock', width: 10 },
+    { header: 'Created By', key: 'creator', width: 20 },
+    { header: 'Date', key: 'createdAt', width: 15 }
+  ];
+
+  const handleExport = async (format) => {
+    const data = getExportData();
+    const filename = `inventory_report_${new Date().toISOString().split('T')[0]}`;
+
+    try {
+      if (format === 'excel') {
+        await exportToExcel(data, exportColumns, 'Inventory', filename);
+      } else if (format === 'pdf') {
+        exportToPDF(data, exportColumns, 'Inventory Report', filename);
+      } else if (format === 'docx') {
+        await exportToDocx(data, exportColumns, 'Inventory Report', filename);
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      setError('Failed to export data');
+    }
+  };
+
+  // Import functions
+  const handleDownloadTemplate = () => {
+    const templateColumns = [
+      { header: 'Name', key: 'name', width: 30, sample: 'School Shirt' },
+      { header: 'Type', key: 'type', width: 20, sample: 'Shirt' },
+      { header: 'Level', key: 'level', width: 15, sample: 'Junior' },
+      { header: 'Description', key: 'description', width: 40, sample: 'Blue cotton shirt' },
+      { header: 'Price', key: 'price', width: 15, sample: '25.00' }
     ];
-
-    // Style the header row
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-
-    // Add data
-    products.forEach(product => {
-      worksheet.addRow({
-        name: product.name,
-        level: product.level,
-        school: product.schoolName,
-        type: product.type,
-        status: calculateStockStatus(product.variants).type,
-        stock: product.variants.reduce((total, variant) => 
-          total + variant.sizes.reduce((sum, size) => sum + (size.quantity || 0), 0), 0),
-        creator: product.creatorName,
-        date: product.createdAt ? new Date(product.createdAt.toDate()).toLocaleDateString() : 'Unknown'
-      });
-    });
-
-    // Auto-fit columns
-    worksheet.columns.forEach(column => {
-      column.width = Math.max(column.width || 10, 15);
-    });
-
-    // Generate and download the file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'inventory_report.xlsx';
-    link.click();
-    window.URL.revokeObjectURL(url);
+    generateTemplate(templateColumns, 'product_import_template');
   };
 
-  const exportToPDF = async () => {
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
-    const { width, height } = page.getSize();
-    
-    // Add title
-    page.drawText('Inventory Report', {
-      x: 50,
-      y: height - 50,
-      size: 20,
-      color: rgb(0, 0, 0),
-    });
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
 
-    // Add content
-    let yOffset = height - 100;
-    products.forEach((product, index) => {
-      const stockStatus = calculateStockStatus(product.variants);
-      const text = `${index + 1}. ${product.name} - ${product.level} - ${stockStatus.type}`;
-      page.drawText(text, {
-        x: 50,
-        y: yOffset,
-        size: 12,
-        color: rgb(0, 0, 0),
+    setImporting(true);
+    try {
+      const data = await parseExcel(file);
+      console.log('Imported data:', data);
+
+      if (data.length === 0) {
+        throw new Error('No data found in file');
+      }
+
+      // Process and save data
+      // Note: This is a simplified import. Complex variant/size matching might need a dedicated UI wizard.
+      // For now, we'll create basic product entries (uniforms)
+
+      const { user } = useAuthStore.getState();
+      const batchPromises = data.map(async (row) => {
+        // Basic validation
+        if (!row.Name || !row.Type) return null;
+
+        const newProduct = {
+          name: row.Name,
+          type: row.Type, // 'Shirt', 'Trouser', etc.
+          level: row.Level || 'Unspecified',
+          description: row.Description || '',
+          price: Number(row.Price) || 0,
+          schoolId: 'Unassigned', // Defaults to unassigned if not mapped. Mapping names to IDs is complex without UI.
+          schoolName: 'Unassigned',
+          variants: [], // Empty variants for now
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          createdByUid: user?.uid || 'system',
+          createdByName: user?.displayName || 'System',
+          createdByRole: 'staff'
+        };
+
+        return addDoc(collection(db, 'uniforms'), newProduct);
       });
-      yOffset -= 20;
-    });
 
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'inventory_report.pdf';
-    link.click();
+      await Promise.all(batchPromises);
+
+      alert(`Successfully imported ${data.length} products! Refreshing...`);
+      // Trigger refresh logic if needed
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Import error:', error);
+      setError('Failed to import products: ' + error.message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
+
 
   // Enhanced filtering
   const filteredProducts = products.filter((product) => {
     console.log('Filtering product:', product); // Debug log for each product
 
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.type?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesLevel = levelFilter === 'all' || product.level === levelFilter;
     const matchesSchool = schoolFilter === 'all' || product.school === schoolFilter;
-    
+
     console.log('Search match:', matchesSearch);
     console.log('Level match:', matchesLevel);
     console.log('School match:', matchesSchool);
-    
+
     return matchesSearch && matchesLevel && matchesSchool;
   });
 
@@ -782,7 +808,7 @@ const Inventory = () => {
         >
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Error Loading Inventory</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
-          <Button 
+          <Button
             onClick={() => window.location.reload()}
             className="bg-red-500 hover:bg-red-600 text-white"
           >
@@ -806,10 +832,10 @@ const Inventory = () => {
       <div className="max-w-[1600px] mx-auto px-6 py-8 space-y-8">
         {/* Header Section */}
         <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-card dark:bg-black rounded-3xl shadow-xl border border-border dark:border-gray-700 overflow-hidden"
-          >
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card dark:bg-black rounded-3xl shadow-xl border border-border dark:border-gray-700 overflow-hidden"
+        >
           <div className="p-8">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
               <div>
@@ -822,7 +848,41 @@ const Inventory = () => {
               </div>
               <div className="flex flex-wrap gap-4">
                 <div className="relative">
-                  <Button 
+                  <Button
+                    onClick={() => document.getElementById('importDropdown').classList.toggle('hidden')}
+                    className="group bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
+                  >
+                    <Upload className="w-5 h-5" />
+                    <span className="font-medium">{importing ? 'Importing...' : 'Import'}</span>
+                  </Button>
+                  <div id="importDropdown" className="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                    <div className="py-1">
+                      <button
+                        onClick={handleDownloadTemplate}
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
+                      >
+                        <FileSpreadsheet className="w-4 h-4" />
+                        Download Template
+                      </button>
+                      <button
+                        onClick={() => fileInputRef.current.click()}
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Upload Excel
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".xlsx, .xls"
+                    onChange={handleFileUpload}
+                  />
+                </div>
+                <div className="relative">
+                  <Button
                     onClick={() => document.getElementById('exportDropdown').classList.toggle('hidden')}
                     className="group bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
                   >
@@ -854,8 +914,8 @@ const Inventory = () => {
                     </div>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => navigate('/inventory/add')} 
+                <Button
+                  onClick={() => navigate('/inventory/add')}
                   className="group bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
                 >
                   <Plus className="w-5 h-5 transition-transform group-hover:rotate-90 duration-300" />
@@ -1064,7 +1124,7 @@ const Inventory = () => {
                                   {modalSearchTerm ? 'No matching products found' : 'No products found'}
                                 </h3>
                                 <p className="text-gray-500 dark:text-gray-400">
-                                  {modalSearchTerm 
+                                  {modalSearchTerm
                                     ? `No products match "${modalSearchTerm}". Try a different search term.`
                                     : 'There are no products matching this criteria.'
                                   }
@@ -1102,101 +1162,99 @@ const Inventory = () => {
 
                               {/* Products List */}
                               {paginatedProducts.map((product, productIndex) => (
-                              <motion.div
-                                key={product.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: productIndex * 0.05 }}
-                                className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
-                              >
-                                {/* Product Header */}
-                                <div className="flex items-center justify-between mb-6">
-                                  <div className="flex items-center gap-4">
-                                    <div className="relative">
-                                      <img
-                                        src={getProductImage(product)}
-                                        alt={product.name}
-                                        className="w-20 h-20 rounded-2xl object-cover shadow-md"
-                                      />
-                                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center">
-                                        <span className="text-xs font-bold text-white">{product.variants?.length || 0}</span>
+                                <motion.div
+                                  key={product.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: productIndex * 0.05 }}
+                                  className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
+                                >
+                                  {/* Product Header */}
+                                  <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                      <div className="relative">
+                                        <img
+                                          src={getProductImage(product)}
+                                          alt={product.name}
+                                          className="w-20 h-20 rounded-2xl object-cover shadow-md"
+                                        />
+                                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center">
+                                          <span className="text-xs font-bold text-white">{product.variants?.length || 0}</span>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div>
-                                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{product.name}</h3>
-                                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{product.type}</p>
-                                      <div className="flex items-center gap-2">
-                                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium">
-                                          {product.level || 'N/A'}
-                                        </span>
-                                        <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-medium">
-                                          {product.gender || 'Unisex'}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => handleViewDetails(product)}
-                                    className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-                                  >
-                                    View Details
-                                  </button>
-                                </div>
-
-                                {/* Variants Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                  {product.variants?.map((variant, idx) => {
-                                    const variantStatus = calculateStockStatus([variant]);
-                                    if (
-                                      (selectedProducts.type === "out_of_stock" && variantStatus.type !== "error") ||
-                                      (selectedProducts.type === "low_stock" && variantStatus.type !== "warning") ||
-                                      (selectedProducts.type === "in_stock" && variantStatus.type !== "success")
-                                    ) {
-                                      return null;
-                                    }
-                                    
-                                    const totalQuantity = variant.sizes?.reduce((sum, size) => sum + (Number(size.quantity) || 0), 0) || 0;
-                                    
-                                    return (
-                                      <div key={idx} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200">
-                                        <div className="flex justify-between items-start mb-3">
-                                          <div>
-                                            <h4 className="font-bold text-gray-900 dark:text-white text-lg">{variant.variantType}</h4>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{variant.color}</p>
-                                          </div>
-                                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                            variantStatus.type === 'error' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                                            variantStatus.type === 'warning' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
-                                            'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                          }`}>
-                                            {totalQuantity} total
+                                      <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{product.name}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{product.type}</p>
+                                        <div className="flex items-center gap-2">
+                                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium">
+                                            {product.level || 'N/A'}
+                                          </span>
+                                          <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-medium">
+                                            {product.gender || 'Unisex'}
                                           </span>
                                         </div>
-                                        
-                                        {/* Size breakdown */}
-                                        <div className="space-y-2">
-                                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Size Breakdown</p>
-                                          <div className="flex flex-wrap gap-2">
-                                            {variant.sizes?.map((size, sizeIdx) => (
-                                              <div key={sizeIdx} className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{size.size}</span>
-                                                <span className={`text-xs font-bold ${
-                                                  Number(size.quantity) === 0 ? 'text-red-600 dark:text-red-400' :
-                                                  Number(size.quantity) <= (Number(size.reorderLevel) || 5) ? 'text-amber-600 dark:text-amber-400' :
-                                                  'text-green-600 dark:text-green-400'
-                                                }`}>
-                                                  ({size.quantity})
-                                                </span>
-                                              </div>
-                                            ))}
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => handleViewDetails(product)}
+                                      className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                                    >
+                                      View Details
+                                    </button>
+                                  </div>
+
+                                  {/* Variants Grid */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {product.variants?.map((variant, idx) => {
+                                      const variantStatus = calculateStockStatus([variant]);
+                                      if (
+                                        (selectedProducts.type === "out_of_stock" && variantStatus.type !== "error") ||
+                                        (selectedProducts.type === "low_stock" && variantStatus.type !== "warning") ||
+                                        (selectedProducts.type === "in_stock" && variantStatus.type !== "success")
+                                      ) {
+                                        return null;
+                                      }
+
+                                      const totalQuantity = variant.sizes?.reduce((sum, size) => sum + (Number(size.quantity) || 0), 0) || 0;
+
+                                      return (
+                                        <div key={idx} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200">
+                                          <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                              <h4 className="font-bold text-gray-900 dark:text-white text-lg">{variant.variantType}</h4>
+                                              <p className="text-sm text-gray-500 dark:text-gray-400">{variant.color}</p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${variantStatus.type === 'error' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                              variantStatus.type === 'warning' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
+                                                'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                              }`}>
+                                              {totalQuantity} total
+                                            </span>
+                                          </div>
+
+                                          {/* Size breakdown */}
+                                          <div className="space-y-2">
+                                            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Size Breakdown</p>
+                                            <div className="flex flex-wrap gap-2">
+                                              {variant.sizes?.map((size, sizeIdx) => (
+                                                <div key={sizeIdx} className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{size.size}</span>
+                                                  <span className={`text-xs font-bold ${Number(size.quantity) === 0 ? 'text-red-600 dark:text-red-400' :
+                                                    Number(size.quantity) <= (Number(size.reorderLevel) || 5) ? 'text-amber-600 dark:text-amber-400' :
+                                                      'text-green-600 dark:text-green-400'
+                                                    }`}>
+                                                    ({size.quantity})
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </motion.div>
-                            ))}
+                                      );
+                                    })}
+                                  </div>
+                                </motion.div>
+                              ))}
 
                               {/* Pagination Controls */}
                               {totalPages > 1 && (
@@ -1204,7 +1262,7 @@ const Inventory = () => {
                                   <div className="text-sm text-gray-500 dark:text-gray-400">
                                     Showing {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length.toLocaleString()} products
                                   </div>
-                                  
+
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -1213,13 +1271,13 @@ const Inventory = () => {
                                     >
                                       Previous
                                     </button>
-                                    
+
                                     <div className="flex items-center gap-1">
                                       {/* Show page numbers with ellipsis for large datasets */}
                                       {(() => {
                                         const pages = [];
                                         const showEllipsis = totalPages > 7;
-                                        
+
                                         if (!showEllipsis) {
                                           // Show all pages if 7 or fewer
                                           for (let i = 1; i <= totalPages; i++) {
@@ -1235,7 +1293,7 @@ const Inventory = () => {
                                             pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
                                           }
                                         }
-                                        
+
                                         return pages.map((page, index) => (
                                           page === '...' ? (
                                             <span key={index} className="px-3 py-2 text-gray-400">...</span>
@@ -1243,11 +1301,10 @@ const Inventory = () => {
                                             <button
                                               key={page}
                                               onClick={() => setCurrentPage(page)}
-                                              className={`px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                                                currentPage === page
-                                                  ? 'bg-indigo-500 text-white shadow-lg'
-                                                  : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                                              }`}
+                                              className={`px-3 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === page
+                                                ? 'bg-indigo-500 text-white shadow-lg'
+                                                : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                                }`}
                                             >
                                               {page}
                                             </button>
@@ -1255,7 +1312,7 @@ const Inventory = () => {
                                         ));
                                       })()}
                                     </div>
-                                    
+
                                     <button
                                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                                       disabled={currentPage === totalPages}
@@ -1287,7 +1344,7 @@ const Inventory = () => {
               exit={{ opacity: 0, height: 0 }}
               className="bg-white dark:bg-black rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
             >
-              <DetailedInventoryAnalysis 
+              <DetailedInventoryAnalysis
                 data={{
                   schools,
                   inventory: products,
@@ -1326,7 +1383,7 @@ const Inventory = () => {
                   className="block w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300"
                 />
               </div>
-              
+
               <div className="flex flex-wrap gap-4">
                 <div className="relative">
                   <select
@@ -1414,9 +1471,9 @@ const Inventory = () => {
                   <tr key={product.id} className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted/20'} hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 last:border-b-0`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <img 
-                          src={getProductImage(product)} 
-                          alt={product.name} 
+                        <img
+                          src={getProductImage(product)}
+                          alt={product.name}
                           className="w-12 h-12 rounded-lg object-cover border border-border shadow-sm"
                         />
                         <div>
@@ -1457,8 +1514,8 @@ const Inventory = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <button 
-                          onClick={() => handleViewDetails(product)} 
+                        <button
+                          onClick={() => handleViewDetails(product)}
                           className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all duration-200 border border-blue-200"
                           title="View Details"
                         >
@@ -1466,15 +1523,15 @@ const Inventory = () => {
                         </button>
                         {isManager() && (
                           <>
-                            <button 
-                              onClick={() => handleReceive(product)} 
+                            <button
+                              onClick={() => handleReceive(product)}
                               className="p-2 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:text-green-700 transition-all duration-200 border border-green-200"
                               title="Receive Stock"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
-                            <button 
-                              onClick={() => handleDelete(product)} 
+                            <button
+                              onClick={() => handleDelete(product)}
                               className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all duration-200 border border-red-200"
                               title="Delete Product"
                             >
@@ -1530,8 +1587,8 @@ const Inventory = () => {
                         <Badge
                           variant={
                             batch.status === 'completed' ? 'success' :
-                            batch.status === 'in_progress' ? 'warning' :
-                            'error'
+                              batch.status === 'in_progress' ? 'warning' :
+                                'error'
                           }
                         >
                           {batch.status}

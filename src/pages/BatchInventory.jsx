@@ -9,11 +9,12 @@ import { useBatchStore } from '../stores/batchStore';
 import { useSchoolStore } from '../stores/schoolStore';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Search, Plus, Filter, FileText, Edit2, Trash2, TrendingUp, Package, DollarSign, BarChart2, X, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Filter, FileText, Edit2, Trash2, TrendingUp, Package, DollarSign, BarChart2, X, AlertTriangle, Download, FileSpreadsheet } from 'lucide-react';
 import { collection, getDocs, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import LoadingScreen from '../components/ui/LoadingScreen';
 import Modal from '../components/ui/Modal';
+import { exportToExcel, exportToPDF, exportToDocx } from '../utils/exportHelper';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -219,6 +220,41 @@ const BatchInventory = () => {
     }
   };
 
+  const handleExport = async (format) => {
+    const data = filteredBatches.map(batch => ({
+      name: batch.name,
+      type: batch.type,
+      createdBy: creatorNames[batch.createdBy] || formatCreatorName(batch.createdBy),
+      itemsCount: batch.items?.reduce((sum, item) => sum + item.sizes?.reduce((sizeSum, size) => sizeSum + (size.quantity || 0), 0), 0) || 0,
+      value: batch.items?.reduce((sum, item) => sum + item.sizes?.reduce((sizeSum, size) => sizeSum + ((size.quantity || 0) * (item.price || 0)), 0), 0) || 0,
+      date: batch.createdAt?.seconds ? new Date(batch.createdAt.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString()
+    }));
+
+    const columns = [
+      { header: 'Batch Name', key: 'name', width: 25 },
+      { header: 'Type', key: 'type', width: 15 },
+      { header: 'Created By', key: 'createdBy', width: 20 },
+      { header: 'Items', key: 'itemsCount', width: 10 },
+      { header: 'Value', key: 'value', width: 15 },
+      { header: 'Date', key: 'date', width: 15 }
+    ];
+
+    const filename = `batch_inventory_${new Date().toISOString().split('T')[0]}`;
+
+    try {
+      if (format === 'excel') {
+        await exportToExcel(data, columns, 'Batches', filename);
+      } else if (format === 'pdf') {
+        exportToPDF(data, columns, 'Batch Inventory Report', filename);
+      } else if (format === 'docx') {
+        await exportToDocx(data, columns, 'Batch Inventory Report', filename);
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      setError('Failed to export batches');
+    }
+  };
+
   if (loading) {
     return <LoadingScreen message="Loading Batches" description="Please wait while we fetch the batch data" />;
   }
@@ -262,6 +298,52 @@ const BatchInventory = () => {
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your uniform batches</p>
         </div>
+        {isManager() && (
+          <Button
+            onClick={() => navigate('/batches/create')}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Create New Batch
+          </Button>
+        )}
+      </div>
+      <div className="flex gap-4">
+        <div className="relative">
+          <Button
+            onClick={() => document.getElementById('batchExportDropdown').classList.toggle('hidden')}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+          >
+            <Download className="w-5 h-5" />
+            Export
+          </Button>
+          <div id="batchExportDropdown" className="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+            <div className="py-1">
+              <button
+                onClick={() => handleExport('excel')}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Export to Excel
+              </button>
+              <button
+                onClick={() => handleExport('pdf')}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
+              >
+                <FileText className="w-4 h-4" />
+                Export to PDF
+              </button>
+              <button
+                onClick={() => handleExport('docx')}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
+              >
+                <FileText className="w-4 h-4" />
+                Export to DOCX
+              </button>
+            </div>
+          </div>
+        </div>
+
         {isManager() && (
           <Button
             onClick={() => navigate('/batches/create')}
@@ -506,7 +588,7 @@ const BatchInventory = () => {
           )
         )}
       </div>
-    </div>
+    </div >
   );
 };
 

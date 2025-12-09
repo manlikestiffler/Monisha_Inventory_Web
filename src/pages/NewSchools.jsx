@@ -7,6 +7,8 @@ import Button from '../components/ui/Button';
 import LoadingScreen from '../components/ui/LoadingScreen';
 import { useSchoolStore } from '../stores/schoolStore';
 import { useAuthStore } from '../stores/authStore';
+import { exportToExcel, exportToPDF, exportToDocx } from '../utils/exportHelper';
+import { FiDownload } from 'react-icons/fi'; // Using react-icons since file already uses it
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -90,10 +92,10 @@ const NewSchools = () => {
     if (window.confirm('Are you sure you want to delete this school?')) {
       try {
         const { user, userProfile } = useAuthStore.getState();
-        const fullName = userProfile?.firstName && userProfile?.lastName 
+        const fullName = userProfile?.firstName && userProfile?.lastName
           ? `${userProfile.firstName} ${userProfile.lastName}`.trim()
           : userProfile?.displayName || user?.displayName || 'Unknown User';
-        
+
         const userInfo = {
           id: user?.uid,
           name: fullName,
@@ -113,7 +115,7 @@ const NewSchools = () => {
     const matchesSearch = nameMatch || addressMatch;
 
     const matchesFilter = (filterOptions.showActive && school.status !== 'inactive') ||
-                          (filterOptions.showInactive && school.status === 'inactive');
+      (filterOptions.showInactive && school.status === 'inactive');
     return matchesSearch && matchesFilter;
   });
 
@@ -141,7 +143,7 @@ const NewSchools = () => {
         >
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Error Loading Schools</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
-          <Button 
+          <Button
             onClick={() => fetchSchools()}
             className="bg-red-500 hover:bg-red-600 text-white"
           >
@@ -160,14 +162,45 @@ const NewSchools = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Schools</h1>
           <p className="mt-1 text-gray-500 dark:text-gray-400 font-light">Manage all schools and their uniform requirements</p>
         </div>
-        <Button 
-          variant="primary" 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 shadow-md"
-        >
-          <FiPlus className="h-5 w-5" />
-          Add School
-        </Button>
+        <div className="flex gap-2">
+          <div className="relative group">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-gray-300 dark:border-gray-600"
+            >
+              <FiDownload className="h-5 w-5" />
+              Export
+            </Button>
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 z-20 hidden group-hover:block">
+              <button
+                onClick={() => handleExport('excel')}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200"
+              >
+                Export to Excel
+              </button>
+              <button
+                onClick={() => handleExport('pdf')}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200"
+              >
+                Export to PDF
+              </button>
+              <button
+                onClick={() => handleExport('docx')}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200"
+              >
+                Export to DOCX
+              </button>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 shadow-md"
+          >
+            <FiPlus className="h-5 w-5" />
+            Add School
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -236,7 +269,7 @@ const NewSchools = () => {
                     </label>
                   </div>
                 </div>
-                
+
                 <button
                   className="w-full text-xs text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300 font-medium"
                   onClick={() => {
@@ -257,7 +290,7 @@ const NewSchools = () => {
         {filteredSchools.length === 0 ? (
           <div className="bg-white dark:bg-black p-10 text-center">
             <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-gray-200 dark:bg-gray-800">
-                <svg className="w-8 h-8 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -301,7 +334,7 @@ const NewSchools = () => {
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
                     <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                       <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Contact</p>

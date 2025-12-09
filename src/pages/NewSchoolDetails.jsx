@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -10,10 +10,10 @@ import Modal from '../components/ui/Modal';
 import StudentModal from '../components/schools/StudentModal';
 import SchoolTabUI from '../components/schools/SchoolTabUI';
 import ModernStudentList from '../components/schools/ModernStudentList';
-import { 
-  FiArrowLeft, 
-  FiPlus, 
-  FiTrash2, 
+import {
+  FiArrowLeft,
+  FiPlus,
+  FiTrash2,
   FiEdit2,
   FiUsers,
   FiHome,
@@ -32,6 +32,9 @@ import {
   FiCheck
 } from 'react-icons/fi';
 import UniformDeficitReport from '../components/students/UniformDeficitReport';
+import { exportToExcel, exportToPDF, exportToDocx, generateTemplate } from '../utils/exportHelper';
+import { parseExcel } from '../utils/importHelper';
+import { addDoc } from 'firebase/firestore';
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -99,7 +102,7 @@ const UniformCard = ({ uniform, uniformDetails, onRemove, index, level, gender }
               </span>
             )}
             {onRemove && (
-              <button 
+              <button
                 onClick={() => onRemove(level, gender, index)}
                 className="text-muted-foreground hover:text-destructive p-2 rounded-lg hover:bg-destructive/10 transition-colors"
                 title="Remove uniform"
@@ -141,9 +144,9 @@ const UniformCategory = ({ title, uniforms = [], availableUniforms = [], onAddUn
           )}
           {title}
         </h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={(e) => {
             e.preventDefault();
             onAddUniform(level, gender);
@@ -154,12 +157,12 @@ const UniformCategory = ({ title, uniforms = [], availableUniforms = [], onAddUn
           Add Uniform
         </Button>
       </div>
-      
+
       {uniforms.length === 0 ? (
         <div className="bg-muted/30 rounded-xl border border-dashed border-border p-6">
           <div className="text-center">
             <p className="text-sm text-muted-foreground">No uniforms added for {title}</p>
-            <button 
+            <button
               onClick={(e) => {
                 e.preventDefault();
                 onAddUniform(level, gender);
@@ -227,7 +230,7 @@ const UniformSets = ({ uniformPolicy = [], availableUniforms = [], onAddUniform,
     Junior: { Boys: [], Girls: [] },
     Senior: { Boys: [], Girls: [] }
   };
-  
+
   uniformPolicy.forEach(policy => {
     if (uniformRequirements[policy.level] && uniformRequirements[policy.level][policy.gender]) {
       uniformRequirements[policy.level][policy.gender].push(policy);
@@ -260,14 +263,14 @@ const NewSchoolDetails = () => {
   const schoolId = params.id;
   const navigate = useNavigate();
   const location = useLocation();
-  const { 
+  const {
     schools,
     fetchSchools,
     fetchUniforms,
-    updateSchool, 
-    deleteSchool, 
-    addStudent: addStudentToSchool, 
-    updateStudent: updateStudentInSchool, 
+    updateSchool,
+    deleteSchool,
+    addStudent: addStudentToSchool,
+    updateStudent: updateStudentInSchool,
     deleteStudent: deleteStudentFromSchool,
     getStudentsForSchool,
     getStudentCountForSchool,
@@ -285,7 +288,7 @@ const NewSchoolDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('uniforms');
-  
+
   const [isEditing, setIsEditing] = useState(null);
   const [editValue, setEditValue] = useState('');
 
@@ -294,7 +297,7 @@ const NewSchoolDetails = () => {
   const [uniformQuantity, setUniformQuantity] = useState(1);
   const [isUniformRequired, setIsUniformRequired] = useState(true);
   const [currentUniformTarget, setCurrentUniformTarget] = useState({ level: null, gender: null });
-  
+
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
@@ -309,14 +312,14 @@ const NewSchoolDetails = () => {
     try {
       const schoolData = await getSchoolById(schoolId);
       setSchool(schoolData);
-      
+
       const studentsData = await getStudentsForSchool(schoolId);
       setStudents(studentsData || []);
     } catch (error) {
       console.error('Error refreshing school data:', error);
     }
   };
-  
+
   // Legacy function name for backward compatibility
   const refreshStudentData = refreshSchoolData;
 
@@ -356,10 +359,10 @@ const NewSchoolDetails = () => {
         refreshSchoolData();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleVisibilityChange);
@@ -413,7 +416,7 @@ const NewSchoolDetails = () => {
         // Try different possible collection names for users
         const possibleCollections = ['inventory_staff', 'inventory_managers', 'staff', 'managers', 'users', 'accounts'];
         const allUsersData = [];
-        
+
         for (const collectionName of possibleCollections) {
           try {
             const snapshot = await getDocs(collection(db, collectionName));
@@ -430,7 +433,7 @@ const NewSchoolDetails = () => {
             console.log(`Collection ${collectionName} not accessible:`, error.message);
           }
         }
-        
+
         console.log('Total users found for student table:', allUsersData.length);
         setAllUsers(allUsersData);
       } catch (error) {
@@ -457,7 +460,7 @@ const NewSchoolDetails = () => {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state]);
-  
+
   // Removed auto-refresh - data updates on user actions and tab visibility
 
   const handleEditField = (field) => {
@@ -536,7 +539,7 @@ const NewSchoolDetails = () => {
       // Refresh school data
       const updatedSchool = await getSchoolById(schoolId);
       setSchool(updatedSchool);
-      
+
       // Reset and close modal
       setShowAddUniformModal(false);
       setSelectedUniform(null);
@@ -547,21 +550,21 @@ const NewSchoolDetails = () => {
       console.error('Error saving uniform:', error);
     }
   };
-  
+
   const getUniformDetailsById = (id) => uniforms.find(u => u.id === id);
 
   const handleRemoveUniform = async (level, gender, index) => {
     try {
       // Get the uniform policy to remove
       const uniformPolicies = school.uniformPolicy || [];
-      const filteredPolicies = uniformPolicies.filter(policy => 
+      const filteredPolicies = uniformPolicies.filter(policy =>
         policy.level === level && policy.gender === gender
       );
-      
+
       if (filteredPolicies[index]) {
         const policyToRemove = filteredPolicies[index];
         await removeUniformPolicy(schoolId, policyToRemove);
-        
+
         // Refresh school data
         const updatedSchool = await getSchoolById(schoolId);
         setSchool(updatedSchool);
@@ -586,10 +589,10 @@ const NewSchoolDetails = () => {
   const handleAddStudent = async (studentData) => {
     try {
       const newStudentId = await addStudentToSchool({ ...studentData, schoolId });
-      
+
       // Create notification for new student addition
       createStudentNotification(studentData.name, school?.name || 'School');
-      
+
       // Refresh students list
       const updatedStudents = await getStudentsForSchool(schoolId);
       setStudents(updatedStudents);
@@ -618,7 +621,7 @@ const NewSchoolDetails = () => {
       throw error;
     }
   };
-  
+
   const handleUpdateStudentUniforms = async (studentData) => {
     try {
       await updateStudentInSchool(studentData.id, studentData);
@@ -630,7 +633,7 @@ const NewSchoolDetails = () => {
       // Optionally, show a toast or other feedback to the user
     }
   };
-  
+
   const handleDeleteStudent = async (studentId) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
       try {
@@ -663,17 +666,154 @@ const NewSchoolDetails = () => {
     setStudents(prev => [...prev, newStudent]);
   };
 
+  const fileInputRef = useRef(null);
+
+  const handleExportStudents = async (format) => {
+    const data = students.map(student => ({
+      name: student.name,
+      class: student.class || 'N/A',
+      gender: student.gender,
+      parentName: student.parentName || 'N/A',
+      parentEmail: student.parentEmail || 'N/A',
+      status: student.status || 'Active'
+    }));
+
+    const columns = [
+      { header: 'Student Name', key: 'name', width: 25 },
+      { header: 'Class/Grade', key: 'class', width: 15 },
+      { header: 'Gender', key: 'gender', width: 10 },
+      { header: 'Parent Name', key: 'parentName', width: 25 },
+      { header: 'Parent Email', key: 'parentEmail', width: 30 },
+      { header: 'Status', key: 'status', width: 10 }
+    ];
+
+    const filename = `${school?.name || 'School'}_students`;
+
+    try {
+      if (format === 'excel') {
+        await exportToExcel(data, columns, 'Students', filename);
+      } else if (format === 'pdf') {
+        exportToPDF(data, columns, 'Students List', filename);
+      } else if (format === 'docx') {
+        await exportToDocx(data, columns, 'Students List', filename);
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      // alert('Failed to export students');
+    }
+  };
+
+  const handleDownloadStudentTemplate = () => {
+    const columns = [
+      { header: 'Name', key: 'name', width: 25, sample: 'John Doe' },
+      { header: 'Class', key: 'class', width: 15, sample: 'Grade 1' },
+      { header: 'Gender', key: 'gender', width: 10, sample: 'Boys' },
+      { header: 'Parent Name', key: 'parentName', width: 25, sample: 'Jane Doe' },
+      { header: 'Parent Email', key: 'parentEmail', width: 30, sample: 'jane@example.com' }
+    ];
+    generateTemplate(columns, 'student_import_template');
+  };
+
+  const handleImportStudents = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const data = await parseExcel(file);
+      console.log('Importing students:', data);
+
+      if (data.length === 0) throw new Error('No data found');
+
+      const promises = data.map(async (row) => {
+        if (!row.Name) return null;
+
+        const newStudent = {
+          name: row.Name,
+          class: row.Class || 'Unassigned',
+          gender: row.Gender || 'Unspecified',
+          parentName: row['Parent Name'] || '',
+          parentEmail: row['Parent Email'] || '',
+          schoolId: schoolId,
+          schoolName: school?.name || '', // Use school name from state
+          uniforms: [], // Initialize empty
+          createdAt: new Date(), // Use client time or serverTimestamp if imported
+          status: 'Active'
+        };
+
+        // We're adding directly to firestore here to bypass store temporarily or could use store function
+        return addDoc(collection(db, 'students'), newStudent);
+      });
+
+      await Promise.all(promises);
+      alert(`Successfully imported ${data.length} students!`);
+
+      // Refresh
+      const updatedStudents = await getStudentsForSchool(schoolId);
+      setStudents(updatedStudents);
+
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Failed to import students: ' + error.message);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const studentsTabContent = (
-    <ModernStudentList
-      key={`students-${students.length}-${students.map(s => s.id).join('-')}`}
-      students={students}
-      onEdit={handleEditStudent}
-      onDelete={handleDeleteStudent}
-      onUpdateStudent={handleUpdateStudentUniforms}
-      availableUniforms={uniforms}
-      school={school}
-      allUsers={allUsers}
-    />
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Student Directory</h3>
+        <div className="flex gap-3">
+          <div className="relative group">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <FiDownload className="h-4 w-4" />
+              Export
+            </Button>
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 z-20 hidden group-hover:block">
+              <button onClick={() => handleExportStudents('excel')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200">Excel</button>
+              <button onClick={() => handleExportStudents('pdf')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200">PDF</button>
+              <button onClick={() => handleExportStudents('docx')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200">DOCX</button>
+            </div>
+          </div>
+
+          <div className="relative group">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+            >
+              <FiUpload className="h-4 w-4" />
+              Import
+            </Button>
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 z-20 hidden group-hover:block">
+              <button onClick={handleDownloadStudentTemplate} className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200">Download Template</button>
+              <button onClick={() => fileInputRef.current.click()} className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-gray-700 dark:text-gray-200">Upload Excel</button>
+            </div>
+          </div>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={handleImportStudents}
+          />
+        </div>
+      </div>
+
+      <ModernStudentList
+        key={`students-${students.length}-${students.map(s => s.id).join('-')}`}
+        students={students}
+        onEdit={handleEditStudent}
+        onDelete={handleDeleteStudent}
+        onUpdateStudent={handleUpdateStudentUniforms}
+        availableUniforms={uniforms}
+        school={school}
+        allUsers={allUsers}
+      />
+    </div>
   );
 
   if (loading) {
@@ -687,7 +827,7 @@ const NewSchoolDetails = () => {
   if (!school) {
     return <div className="p-4 text-gray-600">School not found.</div>;
   }
-  
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -781,7 +921,7 @@ const NewSchoolDetails = () => {
       {showAddStudentModal && (
         <StudentModal
           isOpen={showAddStudentModal}
-          onClose={() => {setShowAddStudentModal(false); setSelectedStudent(null);}}
+          onClose={() => { setShowAddStudentModal(false); setSelectedStudent(null); }}
           onSave={selectedStudent ? handleUpdateStudent : handleAddStudent}
           initialData={selectedStudent}
           school={school}
@@ -806,61 +946,60 @@ const NewSchoolDetails = () => {
             {/* Uniform Selection */}
             <div className="space-y-4">
               <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl">
-                  {(() => {
-                    // Filter uniforms based on level and gender like mobile app
-                    const filteredUniforms = uniforms.filter(uniform => {
-                      // Check gender compatibility - handle case sensitivity
-                      const uniformGender = uniform.gender?.toLowerCase();
-                      const targetGender = currentUniformTarget.gender?.toLowerCase();
-                      const matchesGender = uniformGender === targetGender || 
-                                           uniformGender === 'unisex' || 
-                                           uniformGender === 'male' && targetGender === 'boys' ||
-                                           uniformGender === 'female' && targetGender === 'girls' ||
-                                           !uniform.gender;
-                      
-                      // Check level compatibility - handle case sensitivity
-                      const uniformLevel = uniform.level?.toUpperCase();
-                      const targetLevel = currentUniformTarget.level?.toUpperCase();
-                      const matchesLevel = uniformLevel === targetLevel || !uniform.level;
-                      
-                      return matchesGender && matchesLevel;
-                    });
+                {(() => {
+                  // Filter uniforms based on level and gender like mobile app
+                  const filteredUniforms = uniforms.filter(uniform => {
+                    // Check gender compatibility - handle case sensitivity
+                    const uniformGender = uniform.gender?.toLowerCase();
+                    const targetGender = currentUniformTarget.gender?.toLowerCase();
+                    const matchesGender = uniformGender === targetGender ||
+                      uniformGender === 'unisex' ||
+                      uniformGender === 'male' && targetGender === 'boys' ||
+                      uniformGender === 'female' && targetGender === 'girls' ||
+                      !uniform.gender;
 
-                    if (filteredUniforms.length === 0) {
-                      return (
-                        <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                          <p className="text-gray-600">No uniforms available for {currentUniformTarget.level} {currentUniformTarget.gender}</p>
-                          <p className="text-xs text-gray-500 mt-2">Add uniforms with matching level and gender in the Inventory section</p>
-                        </div>
-                      );
-                    }
+                    // Check level compatibility - handle case sensitivity
+                    const uniformLevel = uniform.level?.toUpperCase();
+                    const targetLevel = currentUniformTarget.level?.toUpperCase();
+                    const matchesLevel = uniformLevel === targetLevel || !uniform.level;
 
-                    return filteredUniforms.map(uniform => (
-                      <div
-                        key={uniform.id}
-                        onClick={() => handleSelectUniform(uniform)}
-                        className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${
-                          selectedUniform?.id === uniform.id 
-                            ? 'bg-red-500/10 border-2 border-red-500/50' 
-                            : 'bg-gray-50 border border-gray-200 hover:border-red-500/30'
-                        }`}
-                      >
-                        <p className="font-medium text-gray-900">{uniform.name}</p>
-                        {uniform.description && (
-                          <p className="mt-1 text-sm text-gray-400">{uniform.description}</p>
-                        )}
-                        <div className="mt-2 flex gap-2">
-                          <span className="text-xs px-2 py-1 bg-gray-200 rounded text-gray-700">
-                            {uniform.gender || 'Unisex'}
-                          </span>
-                          <span className="text-xs px-2 py-1 bg-gray-200 rounded text-gray-700">
-                            {uniform.level || 'All Levels'}
-                          </span>
-                        </div>
+                    return matchesGender && matchesLevel;
+                  });
+
+                  if (filteredUniforms.length === 0) {
+                    return (
+                      <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                        <p className="text-gray-600">No uniforms available for {currentUniformTarget.level} {currentUniformTarget.gender}</p>
+                        <p className="text-xs text-gray-500 mt-2">Add uniforms with matching level and gender in the Inventory section</p>
                       </div>
-                    ));
-                  })()}
-                </div>
+                    );
+                  }
+
+                  return filteredUniforms.map(uniform => (
+                    <div
+                      key={uniform.id}
+                      onClick={() => handleSelectUniform(uniform)}
+                      className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${selectedUniform?.id === uniform.id
+                          ? 'bg-red-500/10 border-2 border-red-500/50'
+                          : 'bg-gray-50 border border-gray-200 hover:border-red-500/30'
+                        }`}
+                    >
+                      <p className="font-medium text-gray-900">{uniform.name}</p>
+                      {uniform.description && (
+                        <p className="mt-1 text-sm text-gray-400">{uniform.description}</p>
+                      )}
+                      <div className="mt-2 flex gap-2">
+                        <span className="text-xs px-2 py-1 bg-gray-200 rounded text-gray-700">
+                          {uniform.gender || 'Unisex'}
+                        </span>
+                        <span className="text-xs px-2 py-1 bg-gray-200 rounded text-gray-700">
+                          {uniform.level || 'All Levels'}
+                        </span>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
 
             {/* Uniform Configuration */}
@@ -889,14 +1028,12 @@ const NewSchoolDetails = () => {
                   <span className="text-sm font-medium text-gray-300">Required item:</span>
                   <button
                     onClick={handleToggleRequired}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                      isUniformRequired ? 'bg-red-600' : 'bg-gray-700'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${isUniformRequired ? 'bg-red-600' : 'bg-gray-700'
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                        isUniformRequired ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${isUniformRequired ? 'translate-x-6' : 'translate-x-1'
+                        }`}
                     />
                   </button>
                 </div>
@@ -920,11 +1057,10 @@ const NewSchoolDetails = () => {
               <button
                 onClick={handleSaveUniform}
                 disabled={!selectedUniform}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  selectedUniform
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${selectedUniform
                     ? 'bg-red-600 hover:bg-red-700 text-white'
                     : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {selectedUniform ? 'Add to School' : 'Select a Uniform'}
               </button>
