@@ -5,6 +5,8 @@ import { FiSave } from 'react-icons/fi';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import { useBatchStore } from '../../stores/batchStore';
+import { useAuthStore } from '../../stores/authStore';
 
 const EditBatchModal = ({ isOpen, onClose, batch }) => {
     const [batchName, setBatchName] = useState('');
@@ -56,9 +58,9 @@ const EditBatchModal = ({ isOpen, onClose, batch }) => {
             // I need to check if I missed the store import.
             // Let's assume I need to import useBatchStore.
 
-            // Re-importing useBatchStore
-            const { updateBatch } = require('../../stores/batchStore').useBatchStore.getState();
-            const { user } = require('../../stores/authStore').useAuthStore.getState();
+            // Get store state
+            const { updateBatch } = useBatchStore.getState();
+            const { user } = useAuthStore.getState();
 
             // Construct userInfo
             const fullName = user?.displayName || user?.email || 'Unknown User';
