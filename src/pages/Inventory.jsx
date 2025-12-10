@@ -1469,40 +1469,44 @@ const Inventory = () => {
               <tbody className="bg-card">
                 {filteredProducts.map((product, index) => (
                   <tr key={product.id} className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted/20'} hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 last:border-b-0`}>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4" style={{ minWidth: '200px', maxWidth: '280px' }}>
                       <div className="flex items-center gap-4">
                         <img
                           src={getProductImage(product)}
                           alt={product.name}
-                          className="w-12 h-12 rounded-lg object-cover border border-border shadow-sm"
+                          className="w-12 h-12 rounded-lg object-cover border border-border shadow-sm flex-shrink-0"
                         />
-                        <div>
-                          <div className="font-semibold text-foreground">{product.name || 'N/A'}</div>
-                          <div className="text-sm text-muted-foreground">{product.school ? schoolsMap[product.school] : 'General'}</div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground truncate">{product.name || 'N/A'}</div>
+                          <div className="text-sm text-muted-foreground truncate" title={product.school ? schoolsMap[product.school] : 'General'}>
+                            {product.school ? schoolsMap[product.school] : 'General'}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <span className="px-3 py-1 inline-flex text-xs font-bold rounded-full bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-600 border border-blue-200 dark:border-blue-800 capitalize">
                         {product.level || 'N/A'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <span className="px-3 py-1 inline-flex text-xs font-bold rounded-full bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-600 border border-green-200 dark:border-green-800 capitalize">
                         {product.type || 'N/A'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <span className="px-3 py-1 inline-flex text-xs font-bold rounded-full bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-600 border border-purple-200 dark:border-purple-800 capitalize">
                         {product.gender || 'N/A'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap" style={{ minWidth: '120px', maxWidth: '150px' }}>
                       <div className="bg-muted/30 rounded-lg p-2 border border-border">
-                        <div className="text-sm font-medium text-foreground">{product.creatorName || 'N/A'}</div>
+                        <div className="text-sm font-medium text-foreground truncate" title={product.creatorName || 'N/A'}>
+                          {product.creatorName || 'N/A'}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <span className="px-2 py-1 text-xs font-medium text-muted-foreground bg-muted/50 rounded-full">
                         {product.creatorRole || 'N/A'}
                       </span>

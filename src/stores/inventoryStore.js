@@ -277,20 +277,22 @@ export const useInventoryStore = create((set, get) => ({
         await Promise.all(variantPromises);
 
         // ALLOCATION TRACKING: Record allocations in batch inventory
-        for (const variant of productData.variants) {
-          if (variant.sizes && variant.sizes.length > 0) {
-            for (const sizeData of variant.sizes) {
-              if (sizeData.batchAllocations && sizeData.batchAllocations.length > 0) {
-                for (const batchAllocation of sizeData.batchAllocations) {
-                  await recordBatchAllocation(batchAllocation.batchId, {
+        // Use productData.batchId since batchAllocations is not populated in the form
+        if (productData.batchId) {
+          for (const variant of productData.variants) {
+            if (variant.sizes && variant.sizes.length > 0) {
+              for (const sizeData of variant.sizes) {
+                const quantity = parseInt(sizeData.quantity, 10) || 0;
+                if (quantity > 0) {
+                  await recordBatchAllocation(productData.batchId, {
                     productId: uniformRef.id,
                     productName: productData.name || productData.productName,
                     schoolId: productData.school || productData.schoolId,
                     schoolName: productData.schoolName || 'Unknown School',
-                    variantType: batchAllocation.variantType || variant.variant,
-                    color: batchAllocation.color || variant.color,
+                    variantType: variant.variant,
+                    color: variant.color,
                     size: sizeData.size,
-                    quantity: sizeData.quantity,
+                    quantity: quantity,
                     allocatedBy: userInfo?.uid || userInfo?.id || 'unknown',
                     allocatedByName: userInfo?.name || userInfo?.displayName || 'Unknown User'
                   });
