@@ -19,7 +19,8 @@ import {
   FileText,
   Box,
   Layers,
-  Upload
+  Upload,
+  DollarSign
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -914,6 +915,13 @@ const Inventory = () => {
                     </div>
                   </div>
                 </div>
+                <Button
+                  onClick={() => navigate('/inventory/financials')}
+                  className="group bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
+                >
+                  <DollarSign className="w-5 h-5" />
+                  <span className="font-medium">Financial Analytics</span>
+                </Button>
                 <Button
                   onClick={() => navigate('/inventory/add')}
                   className="group bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"

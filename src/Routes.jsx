@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import AddProductNew from './pages/AddProductNew';
 import ProductDetails from './pages/ProductDetails';
+import FinancialAnalyticsPage from './pages/FinancialAnalyticsPage';
 import NewSchools from './pages/NewSchools';
 import NewSchoolDetails from './pages/NewSchoolDetails';
 import StudentDetailsPage from './pages/StudentDetailsPage';
@@ -64,7 +65,7 @@ function Routes() {
         <Route path="inventory" element={<Outlet />}>
           <Route index element={<Inventory />} />
           <Route path="add" element={<AddProductNew />} />
-
+          <Route path="financials" element={<FinancialAnalyticsPage />} />
           <Route path="edit/:id" element={<AddProductNew />} />
           <Route path=":id" element={<ProductDetails />} />
         </Route>

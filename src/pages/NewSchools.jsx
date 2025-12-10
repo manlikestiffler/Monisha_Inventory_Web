@@ -1,14 +1,15 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { FiFilter, FiGrid, FiList, FiPlus, FiSearch } from 'react-icons/fi';
+import { FiFilter, FiGrid, FiList, FiPlus, FiSearch, FiDollarSign, FiTrendingUp, FiDownload } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import AddSchoolModal from '../components/schools/AddSchoolModal';
 import Button from '../components/ui/Button';
 import LoadingScreen from '../components/ui/LoadingScreen';
 import { useSchoolStore } from '../stores/schoolStore';
 import { useAuthStore } from '../stores/authStore';
 import { exportToExcel, exportToPDF, exportToDocx } from '../utils/exportHelper';
-import { FiDownload } from 'react-icons/fi'; // Using react-icons since file already uses it
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -45,6 +46,7 @@ const NewSchools = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [totalStudents, setTotalStudents] = useState(0);
   const [schoolStudentCounts, setSchoolStudentCounts] = useState({});
+  const [schoolFinancials, setSchoolFinancials] = useState({});
 
   useEffect(() => {
     const loadSchools = async () => {
@@ -84,8 +86,71 @@ const NewSchools = () => {
   useEffect(() => {
     if (schools.length > 0) {
       loadStudentCounts();
+      loadSchoolFinancials();
     }
   }, [schools]);
+
+  // Load financial data for each school
+  const loadSchoolFinancials = async () => {
+    try {
+      // Fetch uniforms and their variants
+      const uniformsSnapshot = await getDocs(collection(db, 'uniforms'));
+      const uniforms = uniformsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+      const variantsSnapshot = await getDocs(collection(db, 'uniform_variants'));
+      const variants = variantsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+      // Fetch batches for cost price
+      const batchesSnapshot = await getDocs(collection(db, 'batchInventory'));
+      const batches = batchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+      const financials = {};
+
+      schools.forEach(school => {
+        let totalRevenue = 0;
+        let totalCost = 0;
+
+        // Find uniforms for this school
+        const schoolUniforms = uniforms.filter(u => u.school === school.id || u.schoolId === school.id);
+
+        schoolUniforms.forEach(uniform => {
+          const uniformVariants = variants.filter(v => v.uniformId === uniform.id);
+
+          uniformVariants.forEach(variant => {
+            // Find cost price from batch
+            let costPrice = 0;
+            batches.forEach(batch => {
+              batch.items?.forEach(item => {
+                if (item.variantType === variant.variantType) {
+                  costPrice = item.price || 0;
+                }
+              });
+            });
+
+            // Calculate revenue and cost from allocations
+            if (variant.allocationHistory && Array.isArray(variant.allocationHistory)) {
+              variant.allocationHistory.forEach(allocation => {
+                const qty = allocation.quantity || 1;
+                const price = allocation.price || uniform.price || 0;
+                totalRevenue += qty * price;
+                totalCost += qty * costPrice;
+              });
+            }
+          });
+        });
+
+        financials[school.id] = {
+          revenue: totalRevenue,
+          cost: totalCost,
+          profit: totalRevenue - totalCost
+        };
+      });
+
+      setSchoolFinancials(financials);
+    } catch (error) {
+      console.error('Error loading school financials:', error);
+    }
+  };
 
 
   const handleDeleteSchool = async (id) => {
@@ -345,6 +410,28 @@ const NewSchools = () => {
                       <p className="font-medium text-gray-800 dark:text-gray-200">{schoolStudentCounts[school.id] || 0}</p>
                     </div>
                   </div>
+
+                  {/* School Financial Summary */}
+                  {schoolFinancials[school.id] && (
+                    <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg">
+                        <p className="text-green-600 dark:text-green-400 text-xs mb-1 flex items-center gap-1">
+                          <FiDollarSign className="w-3 h-3" /> Revenue
+                        </p>
+                        <p className="font-bold text-green-700 dark:text-green-300">
+                          ${schoolFinancials[school.id].revenue.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-lg ${schoolFinancials[school.id].profit >= 0 ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-red-50 dark:bg-red-900/30'}`}>
+                        <p className={`text-xs mb-1 flex items-center gap-1 ${schoolFinancials[school.id].profit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                          <FiTrendingUp className="w-3 h-3" /> Profit
+                        </p>
+                        <p className={`font-bold ${schoolFinancials[school.id].profit >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'}`}>
+                          ${schoolFinancials[school.id].profit.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-6 flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Link

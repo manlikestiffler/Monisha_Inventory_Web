@@ -29,7 +29,9 @@ import {
   FiDownload,
   FiUpload,
   FiEye,
-  FiCheck
+  FiCheck,
+  FiDollarSign,
+  FiTrendingUp
 } from 'react-icons/fi';
 import UniformDeficitReport from '../components/students/UniformDeficitReport';
 import { exportToExcel, exportToPDF, exportToDocx, generateTemplate } from '../utils/exportHelper';
@@ -306,6 +308,7 @@ const NewSchoolDetails = () => {
   const [newUniformName, setNewUniformName] = useState('');
   const [showAddUniformNameModal, setShowAddUniformNameModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [schoolFinancials, setSchoolFinancials] = useState(null);
 
   // Function to refresh all school data (students and uniform policies)
   const refreshSchoolData = async () => {
@@ -460,6 +463,91 @@ const NewSchoolDetails = () => {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state]);
+
+  // Fetch school financial data
+  useEffect(() => {
+    const loadSchoolFinancials = async () => {
+      if (!schoolId) return;
+
+      try {
+        // Fetch uniforms for this school
+        const uniformsSnapshot = await getDocs(collection(db, 'uniforms'));
+        const allUniforms = uniformsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const schoolUniforms = allUniforms.filter(u => u.school === schoolId || u.schoolId === schoolId);
+
+        // Fetch variants
+        const variantsSnapshot = await getDocs(collection(db, 'uniform_variants'));
+        const variants = variantsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+        // Fetch batches for cost price
+        const batchesSnapshot = await getDocs(collection(db, 'batchInventory'));
+        const batches = batchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+        let totalRevenue = 0;
+        let totalCost = 0;
+        const productMap = {};
+
+        schoolUniforms.forEach(uniform => {
+          const uniformVariants = variants.filter(v => v.uniformId === uniform.id);
+
+          uniformVariants.forEach(variant => {
+            // Find cost price from batch
+            let costPrice = 0;
+            batches.forEach(batch => {
+              batch.items?.forEach(item => {
+                if (item.variantType === variant.variantType) {
+                  costPrice = item.price || 0;
+                }
+              });
+            });
+
+            // Calculate revenue and cost from allocations
+            if (variant.allocationHistory && Array.isArray(variant.allocationHistory)) {
+              variant.allocationHistory.forEach(allocation => {
+                const qty = allocation.quantity || 1;
+                const price = allocation.price || uniform.price || 0;
+                const revenue = qty * price;
+                const cost = qty * costPrice;
+
+                totalRevenue += revenue;
+                totalCost += cost;
+
+                // Track by product
+                if (!productMap[uniform.id]) {
+                  productMap[uniform.id] = {
+                    name: uniform.name,
+                    unitsSold: 0,
+                    revenue: 0,
+                    cost: 0,
+                    profit: 0
+                  };
+                }
+                productMap[uniform.id].unitsSold += qty;
+                productMap[uniform.id].revenue += revenue;
+                productMap[uniform.id].cost += cost;
+                productMap[uniform.id].profit += revenue - cost;
+              });
+            }
+          });
+        });
+
+        const products = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
+
+        if (totalRevenue > 0 || totalCost > 0) {
+          setSchoolFinancials({
+            revenue: totalRevenue,
+            cost: totalCost,
+            profit: totalRevenue - totalCost,
+            products
+          });
+        }
+      } catch (error) {
+        console.error('Error loading school financials:', error);
+      }
+    };
+
+    loadSchoolFinancials();
+  }, [schoolId]);
 
   // Removed auto-refresh - data updates on user actions and tab visibility
 
@@ -875,6 +963,85 @@ const NewSchoolDetails = () => {
               deficitReportTabContent={
                 <UniformDeficitReport school={school} />
               }
+              financialsTabContent={
+                <div className="space-y-6">
+                  {/* Financial Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-green-100 dark:bg-green-800 rounded-lg">
+                          <FiDollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Revenue</span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                        ${schoolFinancials?.revenue?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-6 border border-red-200 dark:border-red-800">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-red-100 dark:bg-red-800 rounded-lg">
+                          <FiShoppingBag className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cost</span>
+                      </div>
+                      <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                        ${schoolFinancials?.cost?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                    <div className={`rounded-xl p-6 border ${(schoolFinancials?.profit || 0) >= 0 ? 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800' : 'bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800'}`}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-lg ${(schoolFinancials?.profit || 0) >= 0 ? 'bg-blue-100 dark:bg-blue-800' : 'bg-orange-100 dark:bg-orange-800'}`}>
+                          <FiTrendingUp className={`w-5 h-5 ${(schoolFinancials?.profit || 0) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`} />
+                        </div>
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Profit</span>
+                      </div>
+                      <p className={`text-2xl font-bold ${(schoolFinancials?.profit || 0) >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-orange-300'}`}>
+                        ${schoolFinancials?.profit?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Product Breakdown Table */}
+                  {schoolFinancials?.products && schoolFinancials.products.length > 0 && (
+                    <div className="bg-card rounded-xl border border-border p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Product Revenue Breakdown</h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-border">
+                          <thead>
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Product</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Units Sold</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Revenue</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Profit</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {schoolFinancials.products.map((product, idx) => (
+                              <tr key={idx}>
+                                <td className="px-4 py-3 text-sm font-medium text-foreground">{product.name}</td>
+                                <td className="px-4 py-3 text-sm text-muted-foreground">{product.unitsSold}</td>
+                                <td className="px-4 py-3 text-sm text-green-600">${product.revenue.toLocaleString()}</td>
+                                <td className={`px-4 py-3 text-sm font-medium ${product.profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                  ${product.profit.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {!schoolFinancials && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FiDollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No financial data available yet.</p>
+                      <p className="text-sm">Financial data will appear once products are allocated to students.</p>
+                    </div>
+                  )}
+                </div>
+              }
             />
           </div>
         </div>
@@ -980,8 +1147,8 @@ const NewSchoolDetails = () => {
                       key={uniform.id}
                       onClick={() => handleSelectUniform(uniform)}
                       className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${selectedUniform?.id === uniform.id
-                          ? 'bg-red-500/10 border-2 border-red-500/50'
-                          : 'bg-gray-50 border border-gray-200 hover:border-red-500/30'
+                        ? 'bg-red-500/10 border-2 border-red-500/50'
+                        : 'bg-gray-50 border border-gray-200 hover:border-red-500/30'
                         }`}
                     >
                       <p className="font-medium text-gray-900">{uniform.name}</p>
@@ -1058,8 +1225,8 @@ const NewSchoolDetails = () => {
                 onClick={handleSaveUniform}
                 disabled={!selectedUniform}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${selectedUniform
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   }`}
               >
                 {selectedUniform ? 'Add to School' : 'Select a Uniform'}

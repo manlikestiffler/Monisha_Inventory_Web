@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, query, collection, getDocs, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { motion } from 'framer-motion';
-import { 
+import {
   ChevronLeft,
   ChevronRight,
   Package,
@@ -18,7 +18,9 @@ import {
   Calendar,
   Clock,
   Edit2,
-  RefreshCw
+  RefreshCw,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Badge from '../components/ui/Badge';
@@ -37,7 +39,7 @@ const getDefaultProductImage = (name, type) => {
 
   const bgColor = bgColors[type] || bgColors.default;
   const textColor = 'ffffff'; // white text
-  
+
   // Create a more visually appealing placeholder with the product name and type
   const displayText = `${name}\n(${type})`;
   return `https://placehold.co/600x600/${bgColor}/${textColor}?text=${encodeURIComponent(displayText)}`;
@@ -47,12 +49,12 @@ const getProductImage = (product) => {
   if (product.imageUrl && product.imageUrl.startsWith('http')) {
     return product.imageUrl;
   }
-  
+
   if (product.imageUrl && product.imageUrl.startsWith('gs://')) {
     // Convert Firebase Storage URL if needed
     return product.imageUrl;
   }
-  
+
   return getDefaultProductImage(product.name, product.type);
 };
 
@@ -66,6 +68,7 @@ const ProductDetails = () => {
   const [variantsWithStock, setVariantsWithStock] = useState([]);
   const [reorderModalOpen, setReorderModalOpen] = useState(false);
   const [selectedReorder, setSelectedReorder] = useState(null);
+  const [financialData, setFinancialData] = useState(null);
   const { isManager } = useAuthStore();
 
   useEffect(() => {
@@ -74,16 +77,16 @@ const ProductDetails = () => {
         // Try to fetch from uniforms collection first
         let docRef = doc(db, 'uniforms', id);
         let docSnap = await getDoc(docRef);
-        
+
         if (!docSnap.exists()) {
           // If not found in uniforms, try raw_materials
           docRef = doc(db, 'raw_materials', id);
           docSnap = await getDoc(docRef);
         }
-        
+
         if (docSnap.exists()) {
           const data = docSnap.data();
-          
+
           // Fetch school name if it's a uniform
           if (data.school) {
             const schoolDoc = await getDoc(doc(db, 'schools', data.school));
@@ -98,7 +101,7 @@ const ProductDetails = () => {
             where('uniformId', '==', id)
           );
           const variantsSnapshot = await getDocs(variantsQuery);
-          
+
           let variants = [];
           variantsSnapshot.forEach(doc => {
             const variantData = doc.data();
@@ -111,18 +114,71 @@ const ProductDetails = () => {
               defaultReorderLevel: variantData.defaultReorderLevel || 5
             });
           });
-          
+
           setVariantsWithStock(variants);
-          
-          const productData = { 
-            id: docSnap.id, 
+
+          const productData = {
+            id: docSnap.id,
             ...data,
             variants: variants,
             createdAt: data.createdAt?.toDate(),
             updatedAt: data.updatedAt?.toDate()
           };
-          
+
           setProduct(productData);
+
+          // Fetch batch data for cost price
+          try {
+            const batchesSnapshot = await getDocs(collection(db, 'batchInventory'));
+            const batches = batchesSnapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+
+            let totalCost = 0;
+            let totalSellingPrice = 0;
+            let totalStock = 0;
+            let totalAllocated = 0;
+            let totalRevenue = 0;
+
+            variants.forEach(variant => {
+              // Find cost price from batch
+              let costPrice = 0;
+              batches.forEach(batch => {
+                batch.items?.forEach(item => {
+                  if (item.variantType === variant.variantType) {
+                    costPrice = item.price || 0;
+                  }
+                });
+              });
+
+              variant.sizes.forEach(size => {
+                const qty = parseInt(size.quantity) || 0;
+                const allocated = parseInt(size.allocated) || 0;
+                const price = parseFloat(size.price) || 0;
+
+                totalStock += qty;
+                totalAllocated += allocated;
+                totalCost += (qty + allocated) * costPrice;
+                totalSellingPrice += (qty + allocated) * price;
+                totalRevenue += allocated * price;
+              });
+
+              variant.costPrice = costPrice;
+            });
+
+            setFinancialData({
+              totalStock,
+              totalAllocated,
+              totalCost,
+              totalSellingPrice,
+              potentialProfit: totalSellingPrice - totalCost,
+              realizedRevenue: totalRevenue,
+              profitMargin: totalSellingPrice > 0 ? ((totalSellingPrice - totalCost) / totalSellingPrice * 100).toFixed(1) : 0
+            });
+
+            setVariantsWithStock(variants);
+          } catch (batchError) {
+            console.error('Error fetching batch data:', batchError);
+            setVariantsWithStock(variants);
+          }
         } else {
           setError('Product not found');
         }
@@ -160,7 +216,7 @@ const ProductDetails = () => {
           </div>
           <div className="text-lg font-medium text-gray-900 dark:text-white">Error</div>
           <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{error}</div>
-          <button 
+          <button
             onClick={() => navigate('/inventory')}
             className="mt-4 inline-flex items-center px-4 py-2 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-xl hover:bg-red-100 dark:hover:bg-red-800 transition-colors text-sm font-medium"
           >
@@ -264,9 +320,58 @@ const ProductDetails = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-500">Last Updated</span>
                     <span className="text-sm text-gray-900">{product.updatedAt?.toLocaleDateString()}</span>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+
+              {/* Financial Summary Card */}
+              {financialData && (
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl shadow-lg border border-green-200 dark:border-green-800 p-6 space-y-4"
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 bg-green-100 dark:bg-green-800 rounded-lg">
+                      <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">Financial Summary</h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Stock</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{financialData.totalStock} units</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Allocated</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{financialData.totalAllocated} units</span>
+                    </div>
+                    <div className="border-t border-green-200 dark:border-green-700 pt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Potential Revenue</span>
+                        <span className="text-sm font-bold text-blue-600">${financialData.totalSellingPrice.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cost</span>
+                      <span className="text-sm font-bold text-red-600">${financialData.totalCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Potential Profit</span>
+                      <span className={`text-sm font-bold ${financialData.potentialProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ${financialData.potentialProfit.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between bg-green-100 dark:bg-green-800/50 rounded-lg p-2">
+                      <span className="text-sm font-medium text-green-700 dark:text-green-300 flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4" />
+                        Profit Margin
+                      </span>
+                      <span className="text-lg font-bold text-green-700 dark:text-green-300">{financialData.profitMargin}%</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             {/* Right Column - Details */}
@@ -323,8 +428,8 @@ const ProductDetails = () => {
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-2">
-                              <div 
-                                className="w-6 h-6 rounded-full border-2 border-white shadow-sm" 
+                              <div
+                                className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
                                 style={{ backgroundColor: variant.color.toLowerCase() }}
                               />
                               <span className="text-sm font-medium text-gray-600 capitalize">
@@ -350,45 +455,42 @@ const ProductDetails = () => {
                             const reorderLevel = size.reorderLevel || variant.defaultReorderLevel || 5;
                             const isLowStock = quantity <= reorderLevel && quantity > 0;
                             const isOutOfStock = quantity === 0;
-                            
+
                             return (
                               <motion.div
                                 key={size.size}
                                 whileHover={{ scale: 1.05 }}
-                                className={`bg-white rounded-lg shadow-sm border-2 p-4 relative ${
-                                  isOutOfStock ? 'border-red-300 bg-red-50/50' :
+                                className={`bg-white rounded-lg shadow-sm border-2 p-4 relative ${isOutOfStock ? 'border-red-300 bg-red-50/50' :
                                   isLowStock ? 'border-yellow-300 bg-yellow-50/50' :
-                                  'border-gray-200'
-                                }`}
+                                    'border-gray-200'
+                                  }`}
                               >
                                 {/* Stock Status Badge */}
                                 {(isLowStock || isOutOfStock) && (
                                   <div className="absolute -top-2 -right-2">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                      isOutOfStock ? 'bg-red-600 text-white' :
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isOutOfStock ? 'bg-red-600 text-white' :
                                       'bg-yellow-500 text-white'
-                                    }`}>
+                                      }`}>
                                       {isOutOfStock ? 'OUT' : 'LOW'}
                                     </span>
                                   </div>
                                 )}
-                                
+
                                 <div className="text-center">
                                   <span className="text-lg font-semibold text-gray-900">Size {size.size}</span>
-                                  <div className={`mt-2 text-2xl font-bold ${
-                                    isOutOfStock ? 'text-red-600' :
+                                  <div className={`mt-2 text-2xl font-bold ${isOutOfStock ? 'text-red-600' :
                                     isLowStock ? 'text-yellow-600' :
-                                    'text-green-600'
-                                  }`}>
+                                      'text-green-600'
+                                    }`}>
                                     {quantity}
                                   </div>
                                   <div className="text-xs text-gray-500 mt-1">pieces</div>
-                                  
+
                                   {/* Reorder Level Info */}
                                   <div className="text-xs text-gray-400 mt-1">
                                     Reorder at: {reorderLevel}
                                   </div>
-                                  
+
                                   {/* Reorder Button */}
                                   {(isLowStock || isOutOfStock) && (
                                     <button
@@ -402,11 +504,10 @@ const ProductDetails = () => {
                                         });
                                         setReorderModalOpen(true);
                                       }}
-                                      className={`mt-3 w-full flex items-center justify-center space-x-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                                        isOutOfStock 
-                                          ? 'bg-red-600 hover:bg-red-700 text-white' 
-                                          : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                                      }`}
+                                      className={`mt-3 w-full flex items-center justify-center space-x-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${isOutOfStock
+                                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                                        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                        }`}
                                     >
                                       <RefreshCw className="w-3 h-3" />
                                       <span>Reorder</span>
@@ -426,7 +527,7 @@ const ProductDetails = () => {
           </div>
         </motion.div>
       </div>
-      
+
       {/* Reorder Modal */}
       {selectedReorder && (
         <ReorderModal
