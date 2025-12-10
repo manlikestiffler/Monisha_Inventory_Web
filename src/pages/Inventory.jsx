@@ -847,87 +847,91 @@ const Inventory = () => {
                   Track and manage your uniform inventory efficiently
                 </p>
               </div>
-              <div className="flex flex-wrap gap-4">
-                <div className="relative">
-                  <Button
-                    onClick={() => document.getElementById('importDropdown').classList.toggle('hidden')}
-                    className="group bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
-                  >
-                    <Upload className="w-5 h-5" />
-                    <span className="font-medium">{importing ? 'Importing...' : 'Import'}</span>
-                  </Button>
-                  <div id="importDropdown" className="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                    <div className="py-1">
-                      <button
-                        onClick={handleDownloadTemplate}
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
-                      >
-                        <FileSpreadsheet className="w-4 h-4" />
-                        Download Template
-                      </button>
-                      <button
-                        onClick={() => fileInputRef.current.click()}
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload Excel
-                      </button>
+              <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Button
+                      onClick={() => document.getElementById('importDropdown').classList.toggle('hidden')}
+                      className="group bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-2 text-sm font-medium"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Import</span>
+                    </Button>
+                    {/* Dropdown content (same as before but positioned better) */}
+                    <div id="importDropdown" className="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="py-1">
+                        <button
+                          onClick={handleDownloadTemplate}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          Download Template
+                        </button>
+                        <button
+                          onClick={() => fileInputRef.current.click()}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload Excel
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept=".xlsx, .xls"
+                      onChange={handleFileUpload}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Button
+                      onClick={() => document.getElementById('exportDropdown').classList.toggle('hidden')}
+                      className="group bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-2 text-sm font-medium"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Export</span>
+                    </Button>
+                    <div id="exportDropdown" className="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="py-1">
+                        <button
+                          onClick={async () => {
+                            try {
+                              await exportToExcel();
+                            } catch (error) {
+                              console.error('Error exporting to Excel:', error);
+                            }
+                          }}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          Export to Excel
+                        </button>
+                        <button
+                          onClick={exportToPDF}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Export to PDF
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".xlsx, .xls"
-                    onChange={handleFileUpload}
-                  />
                 </div>
-                <div className="relative">
-                  <Button
-                    onClick={() => document.getElementById('exportDropdown').classList.toggle('hidden')}
-                    className="group bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
-                  >
-                    <Download className="w-5 h-5" />
-                    <span className="font-medium">Export</span>
-                  </Button>
-                  <div id="exportDropdown" className="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                    <div className="py-1">
-                      <button
-                        onClick={async () => {
-                          try {
-                            await exportToExcel();
-                          } catch (error) {
-                            console.error('Error exporting to Excel:', error);
-                          }
-                        }}
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
-                      >
-                        <FileSpreadsheet className="w-4 h-4" />
-                        Export to Excel
-                      </button>
-                      <button
-                        onClick={exportToPDF}
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Export to PDF
-                      </button>
-                    </div>
-                  </div>
-                </div>
+
                 <Button
                   onClick={() => navigate('/inventory/financials')}
-                  className="group bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
+                  className="group bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-2 text-sm font-medium whitespace-nowrap"
                 >
-                  <DollarSign className="w-5 h-5" />
-                  <span className="font-medium">Financial Analytics</span>
+                  <DollarSign className="w-4 h-4" />
+                  <span>Financials</span>
                 </Button>
                 <Button
                   onClick={() => navigate('/inventory/add')}
-                  className="group bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
+                  className="group bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-2 text-sm font-medium whitespace-nowrap"
                 >
-                  <Plus className="w-5 h-5 transition-transform group-hover:rotate-90 duration-300" />
-                  <span className="font-medium">Add New Product</span>
+                  <Plus className="w-4 h-4 transition-transform group-hover:rotate-90 duration-300" />
+                  <span>Add Product</span>
                 </Button>
               </div>
             </div>

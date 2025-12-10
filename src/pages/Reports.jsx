@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
 import { motion, AnimatePresence } from 'framer-motion';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -9,17 +9,18 @@ import LoadingScreen from '../components/ui/LoadingScreen';
 import SchoolSelect from '../components/SchoolSelect';
 import { getChartColors, getCommonChartProps } from '../utils/chartColors';
 import { exportToExcel, exportToPDF, exportToDocx } from '../utils/exportHelper';
-import { Download } from 'lucide-react'; // Using lucide-react for consistency
+import { Download } from 'lucide-react';
 
 const Reports = () => {
   const [inventoryData, setInventoryData] = useState([]);
   const [variantData, setVariantData] = useState([]);
-  const [uniformsData, setUniformsData] = useState([]); // Store raw uniforms data
+  const [uniformsData, setUniformsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSchool, setSelectedSchool] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('overview');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState([new Date().getFullYear()]); // Dynamic years
   const [ordersData, setOrdersData] = useState([]);
   const [batchesData, setBatchesData] = useState([]);
   const [schoolsData, setSchoolsData] = useState([]);
@@ -31,114 +32,51 @@ const Reports = () => {
     { id: 'financials', name: 'Financials', icon: DollarSign },
     { id: 'schools', name: 'Schools', icon: Users }
   ];
-  const years = [2022, 2023, 2024, 2025];
 
+  // Fetch Data
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch uniforms data
-        const uniformsSnapshot = await getDocs(collection(db, 'uniforms'));
-        let uniforms = uniformsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const [uniformsSnap, variantsSnap, ordersSnap, batchesSnap, schoolsSnap] = await Promise.all([
+          getDocs(collection(db, 'uniforms')),
+          getDocs(collection(db, 'uniform_variants')),
+          getDocs(collection(db, 'orders')),
+          getDocs(collection(db, 'batchInventory')),
+          getDocs(collection(db, 'schools'))
+        ]);
 
-        // Fetch variants for each uniform to get allocation history
-        const variantsSnapshot = await getDocs(collection(db, 'uniform_variants'));
-        const variants = variantsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-
-        // Attach variants to uniforms
-        uniforms = uniforms.map(uniform => ({
-          ...uniform,
-          variants: variants.filter(v => v.uniformId === uniform.id)
+        const variants = variantsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const uniforms = uniformsSnap.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id,
+          variants: variants.filter(v => v.uniformId === doc.id)
         }));
+        const orders = ordersSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const batches = batchesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const schools = schoolsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 
         setUniformsData(uniforms);
-
-        // Fetch orders data (mobile analytics functionality)
-        const ordersSnapshot = await getDocs(collection(db, 'orders'));
-        const orders = ordersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         setOrdersData(orders);
-
-        // Fetch batches data
-        const batchesSnapshot = await getDocs(collection(db, 'batchInventory'));
-        const batches = batchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         setBatchesData(batches);
-
-        // Fetch schools data
-        const schoolsSnapshot = await getDocs(collection(db, 'schools'));
-        const schools = schoolsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         setSchoolsData(schools);
 
-        // Filter uniforms by school if selected
-        let filteredUniforms = uniforms;
-        if (selectedSchool) {
-          filteredUniforms = uniforms.filter(item => item.school === selectedSchool || item.schoolId === selectedSchool);
-        }
-
-        console.log('📊 Reports - Uniforms:', uniforms.length);
-        console.log('📊 Reports - Filtered Uniforms:', filteredUniforms.length);
-
-        const typeCount = filteredUniforms.reduce((acc, item) => {
-          const type = item.type || 'Uncategorized';
-          let totalQuantity = 0;
-
-          // Count from variants
-          if (item.variants && item.variants.length > 0) {
-            totalQuantity = item.variants.reduce((sum, variant) => {
-              if (variant.sizes && Array.isArray(variant.sizes)) {
-                return sum + variant.sizes.reduce((s, size) => s + (parseInt(size.quantity) || 0), 0);
-              }
-              return sum;
-            }, 0);
-          }
-          // Fallback to direct sizes if no variants (legacy structure support)
-          else if (item.sizes && Array.isArray(item.sizes)) {
-            totalQuantity = item.sizes.reduce((s, size) => s + (parseInt(size.quantity) || 0), 0);
-          }
-
-          acc[type] = (acc[type] || 0) + totalQuantity;
-          return acc;
-        }, {});
-
-        const variantCount = filteredUniforms.reduce((acc, item) => {
-          if (item.variants && item.variants.length > 0) {
-            item.variants.forEach(variant => {
-              const variantName = `${item.name} (${variant.variant || 'Standard'})`;
-              let variantQuantity = 0;
-              if (variant.sizes && Array.isArray(variant.sizes)) {
-                variantQuantity = variant.sizes.reduce((s, size) => s + (parseInt(size.quantity) || 0), 0);
-              }
-
-              if (variantQuantity > 0) {
-                acc[variantName] = (acc[variantName] || 0) + variantQuantity;
-              }
+        // Calculate available years
+        const yearsSet = new Set([new Date().getFullYear()]);
+        batches.forEach(b => {
+          if (b.createdAt?.toDate) yearsSet.add(b.createdAt.toDate().getFullYear());
+          else if (b.createdAt?.seconds) yearsSet.add(new Date(b.createdAt.seconds * 1000).getFullYear());
+        });
+        uniforms.forEach(u => {
+          u.variants?.forEach(v => {
+            v.allocationHistory?.forEach(a => {
+              const d = a.allocatedAt ? new Date(a.allocatedAt) : (a.date ? new Date(a.date) : null);
+              if (d) yearsSet.add(d.getFullYear());
             });
-          } else if (item.sizes && Array.isArray(item.sizes)) {
-            // Handle products without variants
-            const itemName = item.name;
-            const itemQuantity = item.sizes.reduce((s, size) => s + (parseInt(size.quantity) || 0), 0);
-            if (itemQuantity > 0) {
-              acc[itemName] = (acc[itemName] || 0) + itemQuantity;
-            }
-          }
-          return acc;
-        }, {});
-
-        console.log('📊 Reports - Type Count:', typeCount);
-        console.log('📊 Reports - Variant Count:', variantCount);
-
-        const typeChartData = Object.keys(typeCount)
-          .map(key => ({ name: key, count: typeCount[key] }))
-          .filter(item => item.count > 0)
-          .sort((a, b) => b.count - a.count); // Sort by count descending
-
-        const variantChartData = Object.keys(variantCount)
-          .map(key => ({ name: key, count: variantCount[key] }))
-          .filter(item => item.count > 0)
-          .sort((a, b) => b.count - a.count); // Sort by count descending
-
-        setInventoryData(typeChartData);
-        setVariantData(variantChartData);
+          });
+        });
+        setAvailableYears(Array.from(yearsSet).sort((a, b) => a - b));
 
       } catch (err) {
         console.error("Error fetching report data:", err);
@@ -149,608 +87,374 @@ const Reports = () => {
     };
 
     fetchAllData();
-  }, [selectedSchool]);
+  }, []);
 
-  // Helper to filter data by school
-  const getFilteredOrders = useCallback(() => {
-    if (!selectedSchool) return ordersData;
-    return ordersData.filter(order => order.schoolId === selectedSchool || order.school === selectedSchool);
-  }, [ordersData, selectedSchool]);
+  // Filter Helpers
+  const getFilteredUniforms = useCallback(() => {
+    if (!selectedSchool) return uniformsData;
+    return uniformsData.filter(item =>
+      item.schoolId === selectedSchool ||
+      item.school === selectedSchool ||
+      item.school?.id === selectedSchool
+    );
+  }, [uniformsData, selectedSchool]);
 
   const getFilteredBatches = useCallback(() => {
     if (!selectedSchool) return batchesData;
+    // Note: Batches are typically warehouse stock. 
+    // Only filter if batches explicitly have schoolId. 
+    // If most don't, this returns empty, which is correct for "School Stock from Warehouse" 
+    // BUT might not be what user wants if they expect to see linked product stock.
     return batchesData.filter(batch => batch.schoolId === selectedSchool);
   }, [batchesData, selectedSchool]);
 
-  const getFilteredUniforms = useCallback(() => {
-    if (!selectedSchool) return uniformsData;
-    return uniformsData.filter(uniform => uniform.school === selectedSchool || uniform.schoolId === selectedSchool);
-  }, [uniformsData, selectedSchool]);
-
-  // Helper to get all allocations (Sold/Depleted items)
   const getFilteredAllocations = useCallback(() => {
     const allocations = [];
+    // Allocations are derived from UNIFORMS (Products), so we use filtered uniforms.
     const filteredUniforms = getFilteredUniforms();
 
     filteredUniforms.forEach(uniform => {
-      if (uniform.variants) {
-        uniform.variants.forEach(variant => {
-          if (variant.allocationHistory && Array.isArray(variant.allocationHistory)) {
-            variant.allocationHistory.forEach(allocation => {
-              allocations.push({
-                ...allocation,
-                productName: uniform.name,
-                price: uniform.price || 0,
-                allocatedAt: allocation.allocatedAt || allocation.date
-              });
-            });
-          }
+      uniform.variants?.forEach(variant => {
+        variant.allocationHistory?.forEach(allocation => {
+          allocations.push({
+            ...allocation,
+            productName: uniform.name,
+            price: uniform.price || 0,
+            allocatedAt: allocation.allocatedAt || allocation.date
+          });
         });
-      }
+      });
     });
     return allocations;
   }, [getFilteredUniforms]);
 
+  // Update Chart Data based on filters
+  useEffect(() => {
+    const filteredUniforms = getFilteredUniforms();
+
+    const typeCount = {};
+    const variantCount = {};
+
+    filteredUniforms.forEach(item => {
+      // Type Count
+      const type = item.type || 'Uncategorized';
+      let quantity = 0;
+      if (item.variants?.length > 0) {
+        quantity = item.variants.reduce((sum, v) => sum + (v.sizes?.reduce((s, sz) => s + (parseInt(sz.quantity) || 0), 0) || 0), 0);
+      } else {
+        quantity = item.sizes?.reduce((s, sz) => s + (parseInt(sz.quantity) || 0), 0) || 0;
+      }
+      typeCount[type] = (typeCount[type] || 0) + quantity;
+
+      // Variant Count
+      if (item.variants?.length > 0) {
+        item.variants.forEach(v => {
+          const vName = `${item.name} (${v.variantType || v.name || v.variant || 'Std'})`;
+          const vQty = v.sizes?.reduce((s, sz) => s + (parseInt(sz.quantity) || 0), 0) || 0;
+          if (vQty > 0) variantCount[vName] = (variantCount[vName] || 0) + vQty;
+        });
+      } else {
+        const iQty = item.sizes?.reduce((s, sz) => s + (parseInt(sz.quantity) || 0), 0) || 0;
+        if (iQty > 0) variantCount[item.name] = (variantCount[item.name] || 0) + iQty;
+      }
+    });
+
+    setInventoryData(Object.entries(typeCount).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count));
+    setVariantData(Object.entries(variantCount).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count));
+
+  }, [getFilteredUniforms, selectedSchool]);
 
 
-  // Mobile analytics functions
+  // Analytics Functions
   const getSalesData = () => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentMonth = new Date().getMonth();
-    const last6Months = [];
-    const salesByMonth = Array(6).fill(0);
+    const yearlySales = Array(12).fill(0);
     const allocations = getFilteredAllocations();
-
-    // If a specific year is selected, show all 12 months for that year
-    if (selectedCategory === 'financials') {
-      const yearlySales = Array(12).fill(0);
-
-      allocations.forEach(allocation => {
-        if (allocation.allocatedAt) {
-          const date = new Date(allocation.allocatedAt);
-          if (date.getFullYear() === parseInt(selectedYear)) {
-            const revenue = (Number(allocation.quantity) || 0) * (Number(allocation.price) || 0);
-            yearlySales[date.getMonth()] += revenue;
-          }
-        }
-      });
-
-      return monthNames.map((month, index) => ({
-        name: month,
-        revenue: yearlySales[index]
-      }));
-    }
-
-    // Default view: Last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const monthIndex = (currentMonth - i + 12) % 12;
-      last6Months.push(monthNames[monthIndex]);
-    }
+    const targetYear = parseInt(selectedYear);
 
     allocations.forEach(allocation => {
       if (allocation.allocatedAt) {
         const date = new Date(allocation.allocatedAt);
-        const month = date.getMonth();
-        const monthsAgo = (currentMonth - month + 12) % 12;
-
-        // Check if it's within the last 6 months (and same year logic roughly, or just recent)
-        // Simple check: is the date within the last 6 months window
-        const sixMonthsAgoDate = new Date();
-        sixMonthsAgoDate.setMonth(sixMonthsAgoDate.getMonth() - 6);
-
-        if (date >= sixMonthsAgoDate) {
-          // Find the correct index in our last6Months array
-          // This is a bit tricky with wrapping years. 
-          // Let's align by month index.
-          const index = last6Months.findIndex(m => m === monthNames[month]);
-          if (index !== -1) {
-            const revenue = (Number(allocation.quantity) || 0) * (Number(allocation.price) || 0);
-            salesByMonth[index] += revenue;
-          }
+        if (date.getFullYear() === targetYear) {
+          const revenue = (Number(allocation.quantity) || 0) * (Number(allocation.price) || 0);
+          yearlySales[date.getMonth()] += revenue;
         }
       }
     });
 
-    return last6Months.map((month, index) => ({
+    return monthNames.map((month, index) => ({
       name: month,
-      revenue: salesByMonth[index]
+      revenue: yearlySales[index]
     }));
   };
 
-  const getOrderStatusData = () => {
-    const orders = getFilteredOrders();
-    const completed = orders.filter(o => o.status === 'completed').length;
-    const pending = orders.filter(o => o.status === 'pending').length;
-    const processing = orders.filter(o => o.status === 'processing').length;
-    const colors = getChartColors();
-
-    return [
-      { name: 'Completed', value: completed, fill: colors.success },
-      { name: 'Pending', value: pending, fill: colors.warning },
-      { name: 'Processing', value: processing, fill: colors.danger }
-    ];
-  };
-
-  const getTotalRevenue = () => {
-    return getFilteredAllocations().reduce((total, allocation) => {
-      return total + ((Number(allocation.quantity) || 0) * (Number(allocation.price) || 0));
-    }, 0);
-  };
-
-  const getYearOverYearData = () => {
-    const yearlyData = {};
-    const allocations = getFilteredAllocations();
-
-    // Find the earliest year from allocations or batches
-    let startYear = new Date().getFullYear();
-
-    // Check allocations
-    allocations.forEach(a => {
-      if (a.allocatedAt) {
-        const year = new Date(a.allocatedAt).getFullYear();
-        if (year < startYear) startYear = year;
-      }
-    });
-
-    // Check batches (creation date) to ensure we cover the start of operations
-    getFilteredBatches().forEach(b => {
-      if (b.createdAt?.seconds) {
-        const year = new Date(b.createdAt.seconds * 1000).getFullYear();
-        if (year < startYear) startYear = year;
-      }
-    });
-
-    // Generate all years from startYear to currentYear
-    const currentYear = new Date().getFullYear();
-    for (let year = startYear; year <= currentYear; year++) {
-      yearlyData[year] = 0;
-    }
-
-    // Fill in revenue
-    allocations.forEach(allocation => {
-      if (allocation.allocatedAt) {
-        const date = new Date(allocation.allocatedAt);
-        const year = date.getFullYear();
-        const revenue = (Number(allocation.quantity) || 0) * (Number(allocation.price) || 0);
-        if (yearlyData[year] !== undefined) {
-          yearlyData[year] += revenue;
-        }
-      }
-    });
-
-    return Object.entries(yearlyData)
-      .map(([year, revenue]) => ({ name: year, revenue }))
-      .sort((a, b) => a.name - b.name);
-  };
-
   const getFinancialOverview = () => {
-    // Realized Revenue: From Allocations (Sold/Distributed)
-    const realizedRevenue = getFilteredAllocations().reduce((sum, allocation) => {
-      return sum + ((Number(allocation.quantity) || 0) * (Number(allocation.price) || 0));
-    }, 0);
+    const realizedRevenue = getFilteredAllocations().reduce((sum, a) => sum + ((Number(a.quantity) || 0) * (Number(a.price) || 0)), 0);
 
-    // Potential Revenue: From Current Stock (Batches + Products)
-    // 1. Batch Stock
-    const batchPotential = getFilteredBatches().reduce((sum, batch) => {
-      return sum + (batch.items?.reduce((itemSum, item) => {
-        return itemSum + (item.sizes?.reduce((sizeSum, size) => {
-          // Note: Batches might not have price. We should ideally look up the product price.
-          // For now, if batch item has price, use it. If not, we might miss this value.
-          // Assuming batch items have a price field or we can't calculate it easily without a lookup map.
-          // Let's use the item.price if available.
-          return sizeSum + ((parseInt(size.quantity) || 0) * (parseInt(item.price) || 0));
-        }, 0) || 0);
+    // Potential Revenue (In Stock)
+    // 1. From Batches (if matches filter)
+    const batchPotential = getFilteredBatches().reduce((sum, b) => {
+      return sum + (b.items?.reduce((isum, item) => {
+        return isum + (item.sizes?.reduce((ssum, size) => ssum + ((parseInt(size.quantity) || 0) * (parseInt(item.price || 0))), 0) || 0);
       }, 0) || 0);
     }, 0);
 
-    // 2. Product Stock (School Inventory)
-    const productPotential = getFilteredUniforms().reduce((sum, uniform) => {
-      if (uniform.variants) {
-        return sum + uniform.variants.reduce((vSum, variant) => {
-          return vSum + (variant.sizes?.reduce((sSum, size) => {
-            return sSum + ((parseInt(size.quantity) || 0) * (parseInt(uniform.price) || 0));
-          }, 0) || 0);
-        }, 0);
-      }
-      return sum;
+    // 2. From Uniforms (School Stock)
+    const productPotential = getFilteredUniforms().reduce((sum, u) => {
+      return sum + (u.variants?.reduce((vsum, v) => {
+        return vsum + (v.sizes?.reduce((ssum, s) => ssum + ((parseInt(s.quantity) || 0) * (parseInt(u.price || 0))), 0) || 0);
+      }, 0) || (u.sizes?.reduce((ssum, s) => ssum + ((parseInt(s.quantity) || 0) * (parseInt(u.price || 0))), 0) || 0));
     }, 0);
 
     return [
-      { name: 'Realized Revenue (Sold/Depleted)', value: realizedRevenue, fill: getChartColors().success },
-      { name: 'Potential Revenue (In Stock)', value: batchPotential + productPotential, fill: getChartColors().primary }
+      { name: 'Realized Revenue', value: realizedRevenue, fill: getChartColors().success },
+      { name: 'Potential Revenue', value: batchPotential + productPotential, fill: getChartColors().primary }
     ];
   };
 
   const getSizeDemandData = () => {
     const sizeData = {};
+    const addToData = (size, qty) => sizeData[size] = (sizeData[size] || 0) + qty;
 
-    // 1. Add Current Stock (Batches) - Warehouse
-    getFilteredBatches().forEach(batch => {
-      if (batch.items && Array.isArray(batch.items)) {
-        batch.items.forEach(item => {
-          if (item.sizes && Array.isArray(item.sizes)) {
-            item.sizes.forEach(size => {
-              const sizeKey = size.size;
-              if (!sizeData[sizeKey]) sizeData[sizeKey] = 0;
-              sizeData[sizeKey] += parseInt(size.quantity) || 0;
-            });
-          }
-        });
-      }
+    // Batches
+    getFilteredBatches().forEach(b => b.items?.forEach(i => i.sizes?.forEach(s => addToData(s.size, parseInt(s.quantity) || 0))));
+    // Uniforms
+    getFilteredUniforms().forEach(u => {
+      u.variants?.forEach(v => v.sizes?.forEach(s => addToData(s.size, parseInt(s.quantity) || 0)));
+      u.sizes?.forEach(s => addToData(s.size, parseInt(s.quantity) || 0));
     });
-
-    // 2. Add School Inventory (Products) - Distributed but not sold
-    getFilteredUniforms().forEach(uniform => {
-      if (uniform.variants) {
-        uniform.variants.forEach(variant => {
-          if (variant.sizes && Array.isArray(variant.sizes)) {
-            variant.sizes.forEach(size => {
-              const sizeKey = size.size;
-              if (!sizeData[sizeKey]) sizeData[sizeKey] = 0;
-              sizeData[sizeKey] += parseInt(size.quantity) || 0;
-            });
-          }
-        });
-      }
-    });
-
-    // 3. Add Sold Items (Allocations) - Depleted
-    getFilteredAllocations().forEach(allocation => {
-      const sizeKey = allocation.size;
-      if (sizeKey) {
-        if (!sizeData[sizeKey]) sizeData[sizeKey] = 0;
-        sizeData[sizeKey] += parseInt(allocation.quantity) || 0;
-      }
-    });
+    // Allocations
+    getFilteredAllocations().forEach(a => addToData(a.size, parseInt(a.quantity) || 0));
 
     return Object.entries(sizeData)
       .sort(([a], [b]) => {
-        const numA = parseInt(a);
-        const numB = parseInt(b);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return a.localeCompare(b);
+        const nA = parseInt(a), nB = parseInt(b);
+        return (!isNaN(nA) && !isNaN(nB)) ? nA - nB : a.localeCompare(b);
       })
       .slice(0, 10)
-      .map(([size, quantity]) => ({ name: size, volume: quantity }));
+      .map(([name, volume]) => ({ name, volume }));
   };
 
+  const getYearOverYearData = () => {
+    const yearlyData = {};
+    availableYears.forEach(y => yearlyData[y] = 0);
+
+    getFilteredAllocations().forEach(a => {
+      if (a.allocatedAt) {
+        const y = new Date(a.allocatedAt).getFullYear();
+        if (yearlyData[y] !== undefined) yearlyData[y] += ((Number(a.quantity) || 0) * (Number(a.price) || 0));
+      }
+    });
+
+    return Object.entries(yearlyData).map(([name, revenue]) => ({ name, revenue }));
+  };
+
+  const getTotalRevenue = () => getFilteredAllocations().reduce((sum, a) => sum + ((Number(a.quantity) || 0) * (Number(a.price) || 0)), 0);
+
   const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center items-center h-96">
-          <LoadingScreen message="Generating Reports..." />
-        </div>
-      );
-    }
-    if (error) {
-      return (
-        <div className="flex flex-col justify-center items-center h-96 text-red-500">
-          <AlertTriangle className="w-12 h-12" />
-          <p className="mt-4">{error}</p>
-        </div>
-      );
-    }
+    if (loading) return <div className="flex justify-center items-center h-96"><LoadingScreen /></div>;
+    if (error) return <div className="flex justify-center items-center h-96 text-red-500"><AlertTriangle className="w-12 h-12" /><p className="mt-4">{error}</p></div>;
+
+    // Chart Components
+    const YearSelector = () => (
+      <div className="flex gap-2 items-center">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Year:</span>
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+        >
+          {availableYears.map(year => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
+      </div>
+    );
+
+    const ExportButton = ({ data, title, columns }) => (
+      <button onClick={() => exportToExcel(data, columns, title, `${title}_${selectedYear}`)} className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
+        <Download className="w-5 h-5" />
+      </button>
+    );
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
         <div className="mb-6 space-y-4">
           <SchoolSelect onChange={setSelectedSchool} value={selectedSchool} />
 
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => {
-              const IconComponent = category.icon;
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${selectedCategory === category.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                >
-                  <IconComponent size={16} />
-                  {category.name}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Year Filter */}
-          {(selectedCategory === 'financials') && (
-            <div className="flex gap-2 items-center">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Year:</span>
-              {years.map((year) => (
-                <button
-                  key={year}
-                  onClick={() => setSelectedYear(year)}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selectedYear === year
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                >
-                  {year}
-                </button>
-              ))}
+          <div className="flex flex-wrap gap-2 justify-between items-center">
+            <div className="flex gap-2">
+              {categories.map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${selectedCategory === cat.id ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+                  >
+                    <Icon size={16} /> {cat.name}
+                  </button>
+                );
+              })}
             </div>
-          )}
+            {/* Show Year Selector for Overview and Financials */}
+            {(selectedCategory === 'overview' || selectedCategory === 'financials') && <YearSelector />}
+          </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <DollarSign className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Revenue</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">${getTotalRevenue().toLocaleString()}</p>
-              </div>
-            </div>
+          <div className="stats-card bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 flex items-center">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg mr-4"><DollarSign className="text-blue-600" /></div>
+            <div><p className="text-sm text-gray-500">Total Revenue</p><p className="text-2xl font-bold">${getTotalRevenue().toLocaleString()}</p></div>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <Package className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Allocations</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{getFilteredAllocations().length}</p>
-              </div>
-            </div>
+          <div className="stats-card bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 flex items-center">
+            <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg mr-4"><Package className="text-green-600" /></div>
+            <div><p className="text-sm text-gray-500">Allocations</p><p className="text-2xl font-bold">{getFilteredAllocations().length}</p></div>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <Package className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Batches</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{getFilteredBatches().length}</p>
-              </div>
-            </div>
+          <div className="stats-card bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 flex items-center">
+            <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg mr-4"><Users className="text-purple-600" /></div>
+            <div><p className="text-sm text-gray-500">Schools</p><p className="text-2xl font-bold">{selectedSchool ? 1 : schoolsData.length}</p></div>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Schools</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{selectedSchool ? 1 : schoolsData.length}</p>
-              </div>
-            </div>
+          <div className="stats-card bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 flex items-center">
+            <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg mr-4"><Package className="text-orange-600" /></div>
+            <div><p className="text-sm text-gray-500">Batches</p><p className="text-2xl font-bold">{getFilteredBatches().length}</p></div>
           </div>
         </div>
 
-        {/* Export Handler */}
-        {(() => {
-          const handleExportData = async (data, title, columns) => {
-            const filename = `${title.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}`;
-            try {
-              await exportToExcel(data, columns, title, filename);
-            } catch (e) {
-              console.error("Export failed", e);
-            }
-          };
-
-          const ExportButton = ({ data, title, columns }) => (
-            <button
-              onClick={() => handleExportData(data, title, columns)}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              title="Export Data"
-            >
-              <Download className="w-5 h-5" />
-            </button>
-          );
-
-          // Define columns for different datasets
-          const overviewColumns = [
-            { header: 'Category', key: 'name', width: 30 },
-            { header: 'Value', key: 'value', width: 20 }
-          ];
-
-          const trendColumns = [
-            { header: 'Month', key: 'name', width: 20 },
-            { header: 'Revenue', key: 'revenue', width: 20 }
-          ];
-
-          const sizeColumns = [
-            { header: 'Size', key: 'name', width: 15 },
-            { header: 'Volume', key: 'volume', width: 15 }
-          ];
-
-          const typeColumns = [
-            { header: 'Type', key: 'name', width: 25 },
-            { header: 'Count', key: 'count', width: 15 }
-          ];
-
-          const variantColumns = [
-            { header: 'Variant', key: 'name', width: 35 },
-            { header: 'Count', key: 'count', width: 15 }
-          ];
-
-          return (
-            <>
-              {/* Dynamic Content Based on Selected Category */}
-              {selectedCategory === 'overview' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Financial Overview (Realized vs Potential) */}
-                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-base">Financial Overview</h2>
-                      <ExportButton data={getFinancialOverview()} title="Financial Overview" columns={overviewColumns} />
-                    </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={getFinancialOverview()} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" hide />
-                        <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
-                        <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                        <Legend />
-                        <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]}>
-                          {getFinancialOverview().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 text-center text-sm text-gray-500">
-                      Includes value of depleted (sold) items and current stock.
-                    </div>
-                  </motion.div>
-
-                  {/* Revenue Trend */}
-                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-base">Revenue Trend (Last 6 Months)</h2>
-                      <ExportButton data={getSalesData()} title="Revenue Trend" columns={trendColumns} />
-                    </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={getSalesData()}>
-                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                        <YAxis {...getCommonChartProps().yAxis} />
-                        <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
-                        <Line type="monotone" dataKey="revenue" stroke={getChartColors().primary} strokeWidth={3} dot={{ fill: getChartColors().primary }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-                </div>
-              )}
-
-              {selectedCategory === 'inventory' && (
-                <div className="space-y-8">
-                  {/* Size Demand Pattern (Total Volume) */}
-                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-base">Size Patterns</h2>
-                      <ExportButton data={getSizeDemandData()} title="Size Demand" columns={sizeColumns} />
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">This chart includes depleted items to show true historical demand.</p>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={getSizeDemandData()}>
-                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                        <YAxis {...getCommonChartProps().yAxis} />
-                        <Tooltip {...getCommonChartProps().tooltip} />
-                        <Bar dataKey="volume" name="Total Volume" fill={getChartColors().success} radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-
-                  {/* Inventory by Type */}
-                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-base">Inventory by Type</h2>
-                      <ExportButton data={inventoryData} title="Inventory by Type" columns={typeColumns} />
-                    </div>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={inventoryData}>
-                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                        <YAxis {...getCommonChartProps().yAxis} />
-                        <Tooltip {...getCommonChartProps().tooltip} />
-                        <Bar dataKey="count" fill={getChartColors().primary} radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-
-                  {/* Top Variants */}
-                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-base">Top Variants</h2>
-                      <ExportButton data={variantData.slice(0, 8)} title="Top Variants" columns={variantColumns} />
-                    </div>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart layout="vertical" data={variantData.slice(0, 8)}>
-                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                        <XAxis type="number" {...getCommonChartProps().xAxis} />
-                        <YAxis type="category" dataKey="name" {...getCommonChartProps().yAxis} width={150} />
-                        <Tooltip {...getCommonChartProps().tooltip} />
-                        <Bar dataKey="count" fill={getChartColors().success} radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-                </div>
-              )}
-
-              {selectedCategory === 'financials' && (
-                <div className="space-y-8">
-                  {/* Year over Year Comparison */}
-                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-base">Year Over Year Revenue</h2>
-                      <ExportButton data={getYearOverYearData()} title="YoY Revenue" columns={trendColumns} />
-                    </div>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={getYearOverYearData()}>
-                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                        <YAxis {...getCommonChartProps().yAxis} />
-                        <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
-                        <Bar dataKey="revenue" fill={getChartColors().primary} radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-
-                  {/* Monthly Breakdown for Selected Year */}
-                  <motion.div className="surface rounded-2xl shadow-elevation-2 p-6 border border-base">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-base">Monthly Revenue Breakdown ({selectedYear})</h2>
-                      <ExportButton data={getSalesData()} title={`Monthly Revenue ${selectedYear}`} columns={trendColumns} />
-                    </div>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <LineChart data={getSalesData()}>
-                        <CartesianGrid {...getCommonChartProps().cartesianGrid} />
-                        <XAxis dataKey="name" {...getCommonChartProps().xAxis} />
-                        <YAxis {...getCommonChartProps().yAxis} />
-                        <Tooltip {...getCommonChartProps().tooltip} formatter={(value) => `$${value.toLocaleString()}`} />
-                        <Line type="monotone" dataKey="revenue" stroke={getChartColors().success} strokeWidth={3} dot={{ fill: getChartColors().success }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-                </div>
-              )}
-
-            </>
-          );
-        })()}
-
-        {selectedCategory === 'schools' && (
+        {/* Content */}
+        {selectedCategory === 'overview' && (
           <div className="space-y-8">
-            {/* School Performance */}
-            <motion.div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">School Performance</h2>
-              <div className="space-y-4">
-                {schoolsData
-                  .filter(school => !selectedSchool || school.id === selectedSchool)
-                  .map((school, index) => {
-                    const schoolOrders = ordersData.filter(o => o.schoolId === school.id);
-                    const totalValue = schoolOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+            {/* Financial Overview */}
+            <motion.div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold mb-6">Financial Overview</h3>
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getFinancialOverview()} barSize={60}>
+                    <defs>
+                      <linearGradient id="realizedGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={getChartColors().success} stopOpacity={0.9} />
+                        <stop offset="95%" stopColor={getChartColors().success} stopOpacity={0.4} />
+                      </linearGradient>
+                      <linearGradient id="potentialGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={getChartColors().primary} stopOpacity={0.9} />
+                        <stop offset="95%" stopColor={getChartColors().primary} stopOpacity={0.4} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 14, fontWeight: 500 }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `$${value.toLocaleString()}`} />
+                    <Tooltip
+                      cursor={{ fill: 'transparent' }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']}
+                    />
+                    <Legend iconType="circle" />
+                    <Bar dataKey="value" name="Revenue" radius={[8, 8, 0, 0]}>
+                      {getFinancialOverview().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`url(#${index === 0 ? 'realizedGradient' : 'potentialGradient'})`} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-4 text-center">
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Realized (Sold)</p>
+                  <p className="text-2xl font-bold text-green-600">${getFinancialOverview()[0].value.toLocaleString()}</p>
+                </div>
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Potential (In Stock)</p>
+                  <p className="text-2xl font-bold text-blue-600">${getFinancialOverview()[1].value.toLocaleString()}</p>
+                </div>
+              </div>
+            </motion.div>
 
-                    return (
-                      <div key={school.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">{school.name}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {schoolOrders.length} orders • {school.studentCount || 0} students
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900 dark:text-gray-100">${totalValue.toFixed(2)}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            ${school.studentCount ? (totalValue / school.studentCount).toFixed(2) : '0.00'}/student
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+            {/* Revenue Trend */}
+            <motion.div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold">Revenue Trend ({selectedYear})</h3>
+                <ExportButton data={getSalesData()} title="Revenue" columns={[{ header: 'Month', key: 'name' }, { header: 'Rev', key: 'revenue' }]} />
+              </div>
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={getSalesData()}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `$${value}`} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke={getChartColors().primary}
+                      strokeWidth={4}
+                      dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </motion.div>
           </div>
         )}
+
+        {selectedCategory === 'inventory' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <motion.div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow border border-gray-200 dark:border-gray-700 col-span-2">
+              <h3 className="text-lg font-bold mb-4">Size Demand</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={getSizeDemandData()}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="volume" fill={getChartColors().success} /></BarChart>
+              </ResponsiveContainer>
+            </motion.div>
+            <motion.div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold mb-4">Inventory by Type</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={inventoryData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="count" fill={getChartColors().primary} /></BarChart>
+              </ResponsiveContainer>
+            </motion.div>
+            <motion.div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold mb-4">Top Variants</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={variantData.slice(0, 10)} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" /><YAxis type="category" dataKey="name" width={100} /><Tooltip /><Bar dataKey="count" fill={getChartColors().warning} /></BarChart>
+              </ResponsiveContainer>
+            </motion.div>
+          </div>
+        )}
+
+        {selectedCategory === 'financials' && (
+          <div className="grid grid-cols-1 gap-8">
+            <motion.div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold mb-4">Monthly Revenue ({selectedYear})</h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={getSalesData()}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Legend /><Line type="monotone" dataKey="revenue" stroke={getChartColors().success} strokeWidth={3} /></LineChart>
+              </ResponsiveContainer>
+            </motion.div>
+            <motion.div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold mb-4">Year Over Year</h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={getYearOverYearData()}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="revenue" fill={getChartColors().primary} /></BarChart>
+              </ResponsiveContainer>
+            </motion.div>
+          </div>
+        )}
+
+        {selectedCategory === 'schools' && (
+          <div className="space-y-4">
+            {schoolsData.filter(s => !selectedSchool || s.id === selectedSchool).map(school => {
+              const val = ordersData.filter(o => o.schoolId === school.id).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+              return (
+                <div key={school.id} className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow flex justify-between items-center">
+                  <div><h4 className="font-bold">{school.name}</h4><p className="text-sm text-gray-500">{school.studentCount || 'N/A'} Students</p></div>
+                  <div className="text-right"><h4 className="font-bold text-green-600">${val.toLocaleString()}</h4></div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
       </motion.div>
     );
   };
@@ -758,26 +462,11 @@ const Reports = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-white dark:bg-black min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Analytics & Reports</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Comprehensive business intelligence and inventory analytics.
-          </p>
         </motion.div>
-
         <AnimatePresence mode="wait">
-          <motion.div
-            key="inventory-content"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
+          <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             {renderContent()}
           </motion.div>
         </AnimatePresence>
